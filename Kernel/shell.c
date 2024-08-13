@@ -16,7 +16,8 @@ typedef enum {
     Shell_CmdType_Ls,
     Shell_CmdType_Cd,
     Shell_CmdType_Cat,
-    Shell_CmdType_Touch
+    Shell_CmdType_Touch,
+    Shell_CmdType_ShutDown
 } Shell_CmdType;
 
 
@@ -75,6 +76,9 @@ sintn Shell_Main(void) {
                 break;
             case Shell_CmdType_Touch:
                 Shell_Cmd_Touch(cmdInput, workingPath);
+                break;
+            case Shell_CmdType_ShutDown:
+                App_Syscall_ShutDown();
                 break;
             default:
                 App_Syscall_StdOut("Shell: Unknown Err Occured\n", sizeof("Shell: Unknown Err Occured\n"));
@@ -151,6 +155,10 @@ Shell_CmdType Shell_GetCmd(const ascii shellInput[]) {
     //Touch
     if(Shell_GetCmd_CmdCmp(shellInput, "touch")) {
         return Shell_CmdType_Touch;
+    }
+    //shutdown
+    if(Shell_GetCmd_CmdCmp(shellInput, "shutdown")) {
+        return Shell_CmdType_ShutDown;
     }
 
     return Shell_CmdType_UnKnown;

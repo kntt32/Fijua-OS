@@ -29,20 +29,6 @@ typedef uint8 EFI_IPv4_ADDRESS[4];
 typedef uint8 EFI_IPv6_ADDRESS[16];
 typedef uint8 EFI_IP_ADDRESS[16];
 
-typedef struct {
-  UINT16  Year;
-  UINT8   Month;
-  UINT8   Day;
-  UINT8   Hour;
-  UINT8   Minute;
-  UINT8   Second;
-  UINT8   Pad1;
-  UINT32  Nanosecond;
-  INT16   TimeZone;
-  UINT8   Daylight;
-  UINT8   Pad2;
-} EFI_TIME;
-
 #define IN
 #define OUT
 #define OPTIONAL

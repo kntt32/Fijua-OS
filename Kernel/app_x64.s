@@ -16,6 +16,8 @@
 .global App_Syscall_MMapFile
 .global App_Syscall_WriteFileFromMem
 
+.global App_Syscall_ShutDown
+
 .text
 
 App_Syscall_NewWindow:
@@ -100,5 +102,11 @@ App_Syscall_MMapFile:
 
 App_Syscall_WriteFileFromMem:
     mov $16, %rax
+    callq *(0x100000)
+    ret
+
+
+App_Syscall_ShutDown:
+    mov $18, %rax
     callq *(0x100000)
     ret

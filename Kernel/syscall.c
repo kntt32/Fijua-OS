@@ -1,5 +1,7 @@
 #include <types.h>
 #include <kernel.h>
+#include <efi.h>
+#include <efi_runtime_services.h>
 #include "syscall.h"
 #include "queue.h"
 #include "task.h"
@@ -13,6 +15,8 @@
 #include "file.h"
 
 #define Syscall_SyscallAddr ((void**)0x100000)
+
+extern KernelInputStruct* KernelInput;
 
 sintn Syscall_AppEnter();
 
@@ -294,6 +298,21 @@ sintn Syscall_WriteFileFromMem(const ascii path[], uintn pathLength, uintn buffS
     }
 
     return 2;
+}
+
+
+//ファイル消去
+
+
+//シャットダウン
+sintn Syscall_ShutDown(void) {
+    Efi_Wrapper(
+        KernelInput->LoadedImage->SystemTable->RuntimeServices->ResetSystem,
+        EfiResetShutdown,
+        0,
+        0,
+        NULL);
+    return -1;
 }
 
 

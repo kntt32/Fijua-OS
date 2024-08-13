@@ -46,4 +46,6 @@ sintn App_Syscall_GetDirEntryByPath(const ascii path[], uintn pathLength, File_D
 
 sintn App_Syscall_MMapFile(const ascii path[], uintn pathLength, uintn buffSize, void* buff);
 
+sintn App_Syscall_WriteFileFromMem(const ascii path[], uintn pathLength, uintn buffSize, void* buff);
+
 #endif

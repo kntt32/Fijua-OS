@@ -7,7 +7,7 @@
 #include "app_x64.h"
 
 #define Shell_DefaultBuffSize (128)
-
+void SPrintIntX(uintn number, uintn buffsize, ascii buff[]);
 
 typedef enum {
     Shell_CmdType_UnKnown,
@@ -15,7 +15,8 @@ typedef enum {
     Shell_CmdType_Echo,
     Shell_CmdType_Ls,
     Shell_CmdType_Cd,
-    Shell_CmdType_Cat
+    Shell_CmdType_Cat,
+    Shell_CmdType_Touch
 } Shell_CmdType;
 
 
@@ -26,6 +27,7 @@ void Shell_Cmd_Cls(void);
 void Shell_Cmd_Ls(const ascii cmdInput[Shell_DefaultBuffSize], const ascii workingPath[Shell_DefaultBuffSize]);
 void Shell_Cmd_Cd(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
 void Shell_Cmd_Cat(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
+void Shell_Cmd_Touch(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
 
 
 sintn Shell_Main(void) {
@@ -52,6 +54,10 @@ sintn Shell_Main(void) {
         Shell_CmdType cmdType = Shell_GetCmd(strBuff);
         const ascii* cmdInput = Shell_Cmd_GetInput(strBuff);
         switch(cmdType) {
+            case Shell_CmdType_UnKnown:
+                App_Syscall_StdOut("Shell: UnSupported Input: \n", sizeof("Shell: UnSupported Input: \n"));
+                App_Syscall_StdOut(strBuff, Shell_DefaultBuffSize);
+                break;
             case Shell_CmdType_Cls:
                 Shell_Cmd_Cls();
                 break;
@@ -67,9 +73,8 @@ sintn Shell_Main(void) {
             case Shell_CmdType_Cat:
                 Shell_Cmd_Cat(cmdInput, workingPath);
                 break;
-            case Shell_CmdType_UnKnown:
-                App_Syscall_StdOut("Shell: UnSupported Input: \n", sizeof("Shell: UnSupported Input: \n"));
-                App_Syscall_StdOut(strBuff, Shell_DefaultBuffSize);
+            case Shell_CmdType_Touch:
+                Shell_Cmd_Touch(cmdInput, workingPath);
                 break;
             default:
                 App_Syscall_StdOut("Shell: Unknown Err Occured\n", sizeof("Shell: Unknown Err Occured\n"));
@@ -143,12 +148,16 @@ Shell_CmdType Shell_GetCmd(const ascii shellInput[]) {
     if(Shell_GetCmd_CmdCmp(shellInput, "cat")) {
         return Shell_CmdType_Cat;
     }
+    //Touch
+    if(Shell_GetCmd_CmdCmp(shellInput, "touch")) {
+        return Shell_CmdType_Touch;
+    }
 
     return Shell_CmdType_UnKnown;
 }
 
 
-//コマンドの引数を取得　ない場合NULLを返す
+//コマンドの引数を取得 ない場合NULLを返す
 const ascii* Shell_Cmd_GetInput(const ascii shellInput[]) {
     if(shellInput == NULL) return NULL;
 
@@ -230,7 +239,6 @@ static uintn Shell_Cmd_GetAbsPath(const ascii relPath[Shell_DefaultBuffSize], co
         if(Shell_DefaultBuffSize <= workingPath_index + nameLength) return 6;
         if(workingPath[workingPath_index + nameLength] == '\0') {
             if(Shell_DefaultBuffSize <= absPath_index) return 7;
-            absPath[absPath_index] = '\0';
             break;
         }
 
@@ -245,6 +253,7 @@ static uintn Shell_Cmd_GetAbsPath(const ascii relPath[Shell_DefaultBuffSize], co
                 //do nothing
             }else if(nameLength == 2 && relPath[relPath_index] == '.' && relPath[relPath_index + 1] == '.') {//../
                 if(absPath_lengthList_index < 0) return 2;
+
                 absPath_index -= absPath_lengthList[absPath_lengthList_index];
                 absPath_lengthList_index --;
             }else {
@@ -260,10 +269,15 @@ static uintn Shell_Cmd_GetAbsPath(const ascii relPath[Shell_DefaultBuffSize], co
                 absPath_lengthList[absPath_lengthList_index] = nameLength + 1;
             }
         }
+
         if(Shell_DefaultBuffSize <= relPath_index + nameLength) return 6;
         if(relPath[relPath_index + nameLength] == '\0') {
             if(Shell_DefaultBuffSize <= absPath_index) return 7;
-            absPath[absPath_index-1] = '\0';
+            if(absPath_index == 0) {
+                absPath[0] = '\0';
+            }else {
+                absPath[absPath_index-1] = '\0';
+            }
             break;
         }
 
@@ -358,7 +372,7 @@ void Shell_Cmd_Cat(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPat
     File_DirectoryEntry dirEntBuff;
     status = App_Syscall_GetDirEntryByPath(absPath, Shell_DefaultBuffSize, &dirEntBuff);
     if(status) {
-        App_Syscall_StdOut("cat: Invalid Path2\n", sizeof("cat: Invalid Path2\n"));
+        App_Syscall_StdOut("cat: Invalid Path\n", sizeof("cat: Invalid Path\n"));
         return;
     }
 
@@ -372,6 +386,29 @@ void Shell_Cmd_Cat(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPat
     filebuff[dirEntBuff.size] = '\0';
     App_Syscall_StdOut((ascii*)filebuff, sizeof(filebuff));
     App_Syscall_StdOut("\n", 2);
+
+    return;
+}
+
+
+//新しいファイル作成
+void Shell_Cmd_Touch(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]) {
+    uintn status = 0;
+
+    //絶対パスの取得
+    ascii absPath[Shell_DefaultBuffSize];
+    status = Shell_Cmd_GetAbsPath(cmdInput, workingPath, absPath);
+    if(status) {
+        App_Syscall_StdOut("touch: Invalid Path\n", sizeof("touch: Invalid Path\n"));
+        return;
+    }
+
+    ascii buff[] = "Hello, World!\nCreated by Touch command";
+    status = App_Syscall_WriteFileFromMem(absPath, Shell_DefaultBuffSize, sizeof(buff), buff);
+    if(status) {
+        App_Syscall_StdOut("touch: Couldn't Create File\n", sizeof("touch: Couldn't Create File\n"));
+        return;
+    }
 
     return;
 }

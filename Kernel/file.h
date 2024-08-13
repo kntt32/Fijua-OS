@@ -18,4 +18,6 @@ uintn File_GetDirectoryEntryByPath(const ascii path[], File_DirectoryEntry* buff
 
 uintn File_OpenAndMMapFile(const ascii path[], uintn buffSize, void* buff);
 
+uintn File_WriteFromMem(const ascii path[], uintn buffSize, void* buff);
+
 #endif

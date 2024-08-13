@@ -14,6 +14,7 @@
 .global App_Syscall_GetFileList
 .global App_Syscall_GetDirEntryByPath
 .global App_Syscall_MMapFile
+.global App_Syscall_WriteFileFromMem
 
 .text
 
@@ -94,5 +95,10 @@ App_Syscall_GetDirEntryByPath:
 
 App_Syscall_MMapFile:
     mov $15, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_WriteFileFromMem:
+    mov $16, %rax
     callq *(0x100000)
     ret

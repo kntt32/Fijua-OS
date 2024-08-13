@@ -190,7 +190,7 @@ static uintn File_DirectoryEntry_SetByFileHandle(EFI_FILE_PROTOCOL* Efi_fileProt
 }
 
 
-static EFI_FILE_PROTOCOL* File_GetHandleByPath(const ascii path[]) {
+static EFI_FILE_PROTOCOL* File_GetHandleByPath(const ascii path[], uint64 openMode) {
     uintn status;
 
     uintn pathLength = Functions_CountStr(path);
@@ -226,7 +226,7 @@ static EFI_FILE_PROTOCOL* File_GetHandleByPath(const ascii path[]) {
             temp_Efi_fileProtocol,
             &Efi_fileProtocol,
             pathUtf16Le,
-            EFI_FILE_MODE_READ,
+            openMode,
             0);
         if(status) {
             return NULL;//ディレクトリが存在しない
@@ -248,7 +248,7 @@ uintn File_GetDirectory(const ascii path[], uintn* buffCount, File_DirectoryEntr
     uintn status = 0;
 
     //ハンドル取得
-    EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path);
+    EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path, EFI_FILE_MODE_READ);
     if(Efi_fileProtocol == NULL) return 2;
 
     //ディレクトリか判定
@@ -283,7 +283,7 @@ uintn File_GetDirectoryEntryByPath(const ascii path[], File_DirectoryEntry* buff
 
     uintn status;
 
-    EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path);
+    EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path, EFI_FILE_MODE_READ);
     if(Efi_fileProtocol == NULL) {
         return 2;
     }
@@ -309,7 +309,7 @@ uintn File_OpenAndMMapFile(const ascii path[], uintn buffSize, void* buff) {
     if(path == NULL || buff == NULL) return 1;
 
     uintn status = 0;
-    EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path);
+    EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path, EFI_FILE_MODE_READ);
     if(Efi_fileProtocol == NULL) {
         return 2;
     }
@@ -332,6 +332,37 @@ uintn File_OpenAndMMapFile(const ascii path[], uintn buffSize, void* buff) {
             Efi_fileProtocol);
         return 4;
     }
+
+    Efi_Wrapper(
+        Efi_fileProtocol->Close,
+        Efi_fileProtocol);
+
+    return 0;
+}
+
+
+//ファイルの書き込み
+uintn File_WriteFromMem(const ascii path[], uintn buffSize, void* buff) {
+    if(path == NULL || (buffSize != 0 && buff == NULL)) return 1;
+
+    uintn status = 0;
+    EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path, EFI_FILE_MODE_CREATE | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_READ);
+    if(Efi_fileProtocol == NULL) {
+        return 2;
+    }
+
+    status = Efi_Wrapper(
+        Efi_fileProtocol->SetPosition,
+        Efi_fileProtocol,
+        0);
+    if(status) return 3;
+
+    status = Efi_Wrapper(
+        Efi_fileProtocol->Write,
+        Efi_fileProtocol,
+        &buffSize,
+        buff);
+    if(status) return 4;
 
     Efi_Wrapper(
         Efi_fileProtocol->Close,

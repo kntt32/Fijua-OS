@@ -270,15 +270,31 @@ sintn Syscall_GetDirEntryByPath(const ascii path[], uintn pathLength, File_Direc
 //パスのファイルをbuffからbuffSize分まで読み込む
 sintn Syscall_MMapFile(const ascii path[], uintn pathLength, uintn buffSize, void* buff) {
     if(path == NULL || buffSize == 0 || buff == NULL) return 1;
+
     for(uintn i=0; i<pathLength; i++) {
         if(path[i] == '\0') {
-            if(File_OpenAndMMapFile(path, buffSize, buff)) return 2;
+            if(File_OpenAndMMapFile(path, buffSize, buff)) return -1;
             return 0;
         }
     }
-    return 3;
+    
+    return 2;
 }
 
+
+//パスのファイルに書き込み ないなら新規作成する
+sintn Syscall_WriteFileFromMem(const ascii path[], uintn pathLength, uintn buffSize, void* buff) {
+    if(path == NULL || (buffSize != 0 && buff == NULL)) return 1;
+
+    for(uintn i=0; i<pathLength; i++) {
+        if(path[i] == '\0') {
+            if(File_WriteFromMem(path, buffSize, buff)) return -1;
+            return 0;
+        }
+    }
+
+    return 2;
+}
 
 
 //メモリ確保

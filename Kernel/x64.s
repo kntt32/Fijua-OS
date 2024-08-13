@@ -195,6 +195,9 @@ Syscall_AppEnter:#16バイトアライメントの必要なし
     cmp $15, %rax
     je Syscall_AppEnter_Syscall_MMapFile
 
+    cmp $16, %rax
+    je Syscall_AppEnter_Syscall_WriteFileFromMem
+
 
     #無効なシステムコール番号
     mov $-1, %rax
@@ -262,6 +265,10 @@ Syscall_AppEnter_Syscall_GetDirEntryByPath:
 
 Syscall_AppEnter_Syscall_MMapFile:
     call Syscall_MMapFile
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_WriteFileFromMem:
+    call Syscall_WriteFileFromMem
     jmp Syscall_AppEnter_Exit
 
 Syscall_AppEnter_Exit:

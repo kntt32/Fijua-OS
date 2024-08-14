@@ -198,10 +198,23 @@ Syscall_AppEnter:#16バイトアライメントの必要なし
     cmp $16, %rax
     je Syscall_AppEnter_Syscall_WriteFileFromMem
 
-
+    cmp $17, %rax
+    je Syscall_AppEnter_Syscall_RemoveFile
 
     cmp $18, %rax
+    je Syscall_AppEnter_Syscall_MkDir
+
+    cmp $19, %rax
     je Syscall_AppEnter_Syscall_ShutDown
+
+    cmp $20, %rax
+    je Syscall_AppEnter_Syscall_AllocPage
+
+    cmp $21, %rax
+    je Syscall_AppEnter_Syscall_FreePages
+
+    cmp $22, %rax
+    je Syscall_AppEnter_Syscall_RunApp
 
     #無効なシステムコール番号
     mov $-1, %rax
@@ -275,9 +288,28 @@ Syscall_AppEnter_Syscall_WriteFileFromMem:
     call Syscall_WriteFileFromMem
     jmp Syscall_AppEnter_Exit
 
+Syscall_AppEnter_Syscall_RemoveFile:
+    call Syscall_RemoveFile
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_MkDir:
+    call Syscall_MkDir
+    jmp Syscall_AppEnter_Exit
 
 Syscall_AppEnter_Syscall_ShutDown:
     call Syscall_ShutDown
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_AllocPage:
+    call Syscall_AllocPage
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_FreePages:
+    call Syscall_FreePages
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_RunApp:
+    call Syscall_RunApp
     jmp Syscall_AppEnter_Exit
 
 Syscall_AppEnter_Exit:

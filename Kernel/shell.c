@@ -15,9 +15,14 @@ typedef enum {
     Shell_CmdType_Echo,
     Shell_CmdType_Ls,
     Shell_CmdType_Cd,
+    Shell_CmdType_Mv,
+    Shell_CmdType_Cp,
+    Shell_CmdType_Rm,
+    Shell_CmdType_MkDir,
     Shell_CmdType_Cat,
     Shell_CmdType_Touch,
-    Shell_CmdType_ShutDown
+    Shell_CmdType_ShutDown,
+    Shell_CmdType_Run
 } Shell_CmdType;
 
 
@@ -27,8 +32,13 @@ void Shell_Cmd_Echo(const ascii cmdInput[]);
 void Shell_Cmd_Cls(void);
 void Shell_Cmd_Ls(const ascii cmdInput[Shell_DefaultBuffSize], const ascii workingPath[Shell_DefaultBuffSize]);
 void Shell_Cmd_Cd(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
+void Shell_Cmd_Mv(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
+void Shell_Cmd_Cp(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
+void Shell_Cmd_Rm(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
+void Shell_Cmd_MkDir(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
 void Shell_Cmd_Cat(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
 void Shell_Cmd_Touch(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
+void Shell_Cmd_Run(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]);
 
 
 sintn Shell_Main(void) {
@@ -56,8 +66,9 @@ sintn Shell_Main(void) {
         const ascii* cmdInput = Shell_Cmd_GetInput(strBuff);
         switch(cmdType) {
             case Shell_CmdType_UnKnown:
-                App_Syscall_StdOut("Shell: UnSupported Input: \n", sizeof("Shell: UnSupported Input: \n"));
+                App_Syscall_StdOut("Shell: UnSupported Input: ", sizeof("Shell: UnSupported Input: "));
                 App_Syscall_StdOut(strBuff, Shell_DefaultBuffSize);
+                App_Syscall_StdOut("\n", 2);
                 break;
             case Shell_CmdType_Cls:
                 Shell_Cmd_Cls();
@@ -71,6 +82,18 @@ sintn Shell_Main(void) {
             case Shell_CmdType_Cd:
                 Shell_Cmd_Cd(cmdInput, workingPath);
                 break;
+            case Shell_CmdType_Mv:
+                Shell_Cmd_Mv(cmdInput, workingPath);
+                break;
+            case Shell_CmdType_Cp:
+                Shell_Cmd_Cp(cmdInput, workingPath);
+                break;
+            case Shell_CmdType_Rm:
+                Shell_Cmd_Rm(cmdInput, workingPath);
+                break;
+            case Shell_CmdType_MkDir:
+                Shell_Cmd_MkDir(cmdInput, workingPath);
+                break;
             case Shell_CmdType_Cat:
                 Shell_Cmd_Cat(cmdInput, workingPath);
                 break;
@@ -79,6 +102,9 @@ sintn Shell_Main(void) {
                 break;
             case Shell_CmdType_ShutDown:
                 App_Syscall_ShutDown();
+                break;
+            case Shell_CmdType_Run:
+                Shell_Cmd_Run(cmdInput, workingPath);
                 break;
             default:
                 App_Syscall_StdOut("Shell: Unknown Err Occured\n", sizeof("Shell: Unknown Err Occured\n"));
@@ -148,6 +174,22 @@ Shell_CmdType Shell_GetCmd(const ascii shellInput[]) {
     if(Shell_GetCmd_CmdCmp(shellInput, "cd")) {
         return Shell_CmdType_Cd;
     }
+    //Mv
+    if(Shell_GetCmd_CmdCmp(shellInput, "mv")) {
+        return Shell_CmdType_Mv;
+    }
+    //Cp
+    if(Shell_GetCmd_CmdCmp(shellInput, "cp")) {
+        return Shell_CmdType_Cp;
+    }
+    //Rm
+    if(Shell_GetCmd_CmdCmp(shellInput, "rm")) {
+        return Shell_CmdType_Rm;
+    }
+    //MkDir
+    if(Shell_GetCmd_CmdCmp(shellInput, "mkdir")) {
+        return Shell_CmdType_MkDir;
+    }
     //Cat
     if(Shell_GetCmd_CmdCmp(shellInput, "cat")) {
         return Shell_CmdType_Cat;
@@ -156,9 +198,13 @@ Shell_CmdType Shell_GetCmd(const ascii shellInput[]) {
     if(Shell_GetCmd_CmdCmp(shellInput, "touch")) {
         return Shell_CmdType_Touch;
     }
-    //shutdown
+    //Shutdown
     if(Shell_GetCmd_CmdCmp(shellInput, "shutdown")) {
         return Shell_CmdType_ShutDown;
+    }
+    //Run
+    if(Shell_GetCmd_CmdCmp(shellInput, "run")) {
+        return Shell_CmdType_Run;
     }
 
     return Shell_CmdType_UnKnown;
@@ -420,3 +466,206 @@ void Shell_Cmd_Touch(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingP
 
     return;
 }
+
+
+//Mvコマンド
+void Shell_Cmd_Mv(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]) {
+    uintn status;
+
+    //絶対パスの取得
+    uintn cmdInput_seekIndex = 0;
+
+    ascii fromRelPath[Shell_DefaultBuffSize];
+    for(uintn i=0; i<Shell_DefaultBuffSize; i++) {
+        if(cmdInput[i] == ' ' || cmdInput[i] == '\0') {
+            fromRelPath[i] = '\0';
+            for(uintn k=i; k<Shell_DefaultBuffSize; k++) {
+                if(cmdInput[k] != ' ' || cmdInput[k] == '\0') {
+                    cmdInput_seekIndex = k;
+                    break;
+                }
+            }
+            if(cmdInput_seekIndex == i) {
+                App_Syscall_StdOut("mv: Invalid Argument\n", sizeof("mv: Invalid Argument\n"));
+                return;
+            }
+            break;
+        }
+        fromRelPath[i] = cmdInput[i];
+    }
+    ascii fromAbsPath[Shell_DefaultBuffSize];
+    status = Shell_Cmd_GetAbsPath(fromRelPath, workingPath, fromAbsPath);
+    if(status) {
+        App_Syscall_StdOut("mv: Invalid Path\n", sizeof("mv: Invalid Path\n"));
+        return;
+    }
+
+    ascii toRelPath[Shell_DefaultBuffSize];
+    for(uintn i=0; i<Shell_DefaultBuffSize-cmdInput_seekIndex; i++) {
+        if(cmdInput[i+cmdInput_seekIndex] == ' ' || cmdInput[i+cmdInput_seekIndex] == '\0') {
+            toRelPath[i] = '\0';
+            break;
+        }
+        toRelPath[i] = cmdInput[i+cmdInput_seekIndex];
+    }
+    ascii toAbsPath[Shell_DefaultBuffSize];
+    status = Shell_Cmd_GetAbsPath(toRelPath, workingPath, toAbsPath);
+    if(status) {
+        App_Syscall_StdOut("mv: Invalid Path\n", sizeof("mv: Invalid Path\n"));
+        return;
+    }
+
+
+    //ファイルサイズの取得
+    File_DirectoryEntry dirEntBuff;
+    status = App_Syscall_GetDirEntryByPath(fromAbsPath, Shell_DefaultBuffSize, &dirEntBuff);
+    if(status) {
+        App_Syscall_StdOut("mv: Invalid Path\n", sizeof("mv: Invalid Path\n"));
+        return;
+    }
+
+    //ファイルバッファへ書き込み
+    uint8 filebuff[dirEntBuff.size];
+    status = App_Syscall_MMapFile(fromAbsPath, Shell_DefaultBuffSize, sizeof(filebuff), filebuff);
+    if(status) {
+        App_Syscall_StdOut("mv: Couldn't Open File\n", sizeof("mv: Couldn't Open File\n"));
+        return;
+    }
+
+    //ファイルの保存
+    status = App_Syscall_WriteFileFromMem(toAbsPath, Shell_DefaultBuffSize, dirEntBuff.size, filebuff);
+    if(status) {
+        App_Syscall_StdOut("mv: Failed\n", sizeof("mv: Failed"));
+        return;
+    }
+
+    //元のファイルの消去
+    status = App_Syscall_RemoveFile(fromAbsPath, Shell_DefaultBuffSize);
+    if(status) {
+        App_Syscall_StdOut("mv: Failed\n", sizeof("mv: Failed\n"));
+        return;
+    }
+
+    return;
+}
+
+
+//Cpコマンド
+void Shell_Cmd_Cp(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]) {
+    uintn status;
+
+    //絶対パスの取得
+    uintn cmdInput_seekIndex = 0;
+
+    ascii fromRelPath[Shell_DefaultBuffSize];
+    for(uintn i=0; i<Shell_DefaultBuffSize; i++) {
+        if(cmdInput[i] == ' ' || cmdInput[i] == '\0') {
+            fromRelPath[i] = '\0';
+            for(uintn k=i; k<Shell_DefaultBuffSize; k++) {
+                if(cmdInput[k] != ' ' || cmdInput[k] == '\0') {
+                    cmdInput_seekIndex = k;
+                    break;
+                }
+            }
+            if(cmdInput_seekIndex == i) {
+                App_Syscall_StdOut("cp: Invalid Argument\n", sizeof("cp: Invalid Argument\n"));
+                return;
+            }
+            break;
+        }
+        fromRelPath[i] = cmdInput[i];
+    }
+    ascii fromAbsPath[Shell_DefaultBuffSize];
+    status = Shell_Cmd_GetAbsPath(fromRelPath, workingPath, fromAbsPath);
+    if(status) {
+        App_Syscall_StdOut("cp: Invalid Path\n", sizeof("cp: Invalid Path\n"));
+        return;
+    }
+
+    ascii toRelPath[Shell_DefaultBuffSize];
+    for(uintn i=0; i<Shell_DefaultBuffSize-cmdInput_seekIndex; i++) {
+        if(cmdInput[i+cmdInput_seekIndex] == ' ' || cmdInput[i+cmdInput_seekIndex] == '\0') {
+            toRelPath[i] = '\0';
+            break;
+        }
+        toRelPath[i] = cmdInput[i+cmdInput_seekIndex];
+    }
+    ascii toAbsPath[Shell_DefaultBuffSize];
+    status = Shell_Cmd_GetAbsPath(toRelPath, workingPath, toAbsPath);
+    if(status) {
+        App_Syscall_StdOut("cp: Invalid Path\n", sizeof("cp: Invalid Path\n"));
+        return;
+    }
+
+
+    //ファイルサイズの取得
+    File_DirectoryEntry dirEntBuff;
+    status = App_Syscall_GetDirEntryByPath(fromAbsPath, Shell_DefaultBuffSize, &dirEntBuff);
+    if(status) {
+        App_Syscall_StdOut("cp: Invalid Path\n", sizeof("cp: Invalid Path\n"));
+        return;
+    }
+
+    //ファイルバッファへ書き込み
+    uint8 filebuff[dirEntBuff.size];
+    status = App_Syscall_MMapFile(fromAbsPath, Shell_DefaultBuffSize, sizeof(filebuff), filebuff);
+    if(status) {
+        App_Syscall_StdOut("cp: Couldn't Open File\n", sizeof("cp: Couldn't Open File\n"));
+        return;
+    }
+
+    //ファイルの保存
+    status = App_Syscall_WriteFileFromMem(toAbsPath, Shell_DefaultBuffSize, dirEntBuff.size, filebuff);
+    if(status) {
+        App_Syscall_StdOut("cp: Failed\n", sizeof("cp: Failed"));
+        return;
+    }
+
+    return;
+}
+
+
+//Rmコマンド
+void Shell_Cmd_Rm(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]) {
+    uintn status;
+
+    ascii absPath[Shell_DefaultBuffSize];
+    status = Shell_Cmd_GetAbsPath(cmdInput, workingPath, absPath);
+    if(status) {
+        App_Syscall_StdOut("rm: Invalid Path\n", sizeof("rm: Invalid Path\n"));
+        return;
+    }
+
+    status = App_Syscall_RemoveFile(absPath, Shell_DefaultBuffSize);
+    if(status) {
+        App_Syscall_StdOut("rm: Failed\n", sizeof("rm: Failed\n"));
+        return;
+    }
+
+    return;
+}
+
+
+//MkDirコマンド
+void Shell_Cmd_MkDir(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]) {
+    uintn status;
+
+    ascii absPath[Shell_DefaultBuffSize];
+    status = Shell_Cmd_GetAbsPath(cmdInput, workingPath, absPath);
+    if(status) {
+        App_Syscall_StdOut("mkdir: Invalid Path\n", sizeof("mkdir: Invalid Path\n"));
+        return;
+    }
+
+    App_Syscall_MkDir(absPath, Shell_DefaultBuffSize);
+    
+    return;
+}
+
+
+//runコマンド　ELF形式の実行可能ファイルを実行する
+void Shell_Cmd_Run(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]) {
+    App_Syscall_StdOut("Coming soon\n", sizeof("Coming soon\n"));
+    return;
+}
+

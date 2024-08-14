@@ -19,4 +19,9 @@ clean:
 	
 
 run:
+ifeq ($(OS), Windows_NT)
+	del .\disk\NvVars
+else
+	rm ./disk/NvVars
+endif
 	qemu-system-x86_64 --monitor stdio -usb -device usb-mouse -device usb-kbd -bios $(OVMFFDPATH) -hda fat:rw:disk

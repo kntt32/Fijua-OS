@@ -48,6 +48,16 @@ sintn App_Syscall_MMapFile(const ascii path[], uintn pathLength, uintn buffSize,
 
 sintn App_Syscall_WriteFileFromMem(const ascii path[], uintn pathLength, uintn buffSize, void* buff);
 
+sintn App_Syscall_RemoveFile(const ascii path[], uintn pathLength);
+
+sintn App_Syscall_MkDir(const ascii path[], uintn pathLength);
+
 sintn App_Syscall_ShutDown(void);
+
+sintn App_Syscall_AllocPage(uintn pages, void** pageAddr);
+
+sintn App_Syscall_FreePages(uintn pages, void* pageAddr);
+
+sintn App_Syscall_RunApp(const ascii path[], uintn pathLength);
 
 #endif

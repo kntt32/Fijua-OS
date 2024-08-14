@@ -190,6 +190,7 @@ static uintn File_DirectoryEntry_SetByFileHandle(EFI_FILE_PROTOCOL* Efi_fileProt
 }
 
 
+//ファイルハンドルを取得
 static EFI_FILE_PROTOCOL* File_GetHandleByPath(const ascii path[], uint64 openMode) {
     uintn status;
 
@@ -202,39 +203,74 @@ static EFI_FILE_PROTOCOL* File_GetHandleByPath(const ascii path[], uint64 openMo
     }
 
     EFI_FILE_PROTOCOL* Efi_fileProtocol;
-    if(pathDepth == 0) {
-        //ルートディレクトリ
-        status = Efi_Wrapper(
-            Efi_SimpleFileSystemProtocol->OpenVolume,
-            Efi_SimpleFileSystemProtocol,
-            &Efi_fileProtocol
-            );
-    }else {
-        //ルートでないディレクトリ
-        EFI_FILE_PROTOCOL* temp_Efi_fileProtocol;
-        status = Efi_Wrapper(
-            Efi_SimpleFileSystemProtocol->OpenVolume,
-            Efi_SimpleFileSystemProtocol,
-            &temp_Efi_fileProtocol
-            );
-        if(status) {
-            return NULL;//不明なエラー
-        }
 
-        status = Efi_Wrapper(
-            temp_Efi_fileProtocol->Open,
-            temp_Efi_fileProtocol,
-            &Efi_fileProtocol,
-            pathUtf16Le,
-            openMode,
-            0);
-        if(status) {
-            return NULL;//ディレクトリが存在しない
-        }
+    //ルートディレクトリ
+    status = Efi_Wrapper(
+        Efi_SimpleFileSystemProtocol->OpenVolume,
+        Efi_SimpleFileSystemProtocol,
+        &Efi_fileProtocol
+        );
 
-        Efi_Wrapper(
-            temp_Efi_fileProtocol->Close,
-            temp_Efi_fileProtocol);
+    if(pathDepth != 0) {
+        if(openMode & EFI_FILE_MODE_CREATE) {
+            //ディレクトリを開いていく
+            uintn targetPathStrIndex = 0;
+            for(uintn i=0; i<pathLength; i++) {
+                if(pathUtf16Le[i] != L'\\') continue;
+                pathUtf16Le[i] = L'\0';
+
+                EFI_FILE_PROTOCOL* temp_Efi_fileProtocol;
+
+                status = Efi_Wrapper(
+                    Efi_fileProtocol->Open,
+                    Efi_fileProtocol,
+                    &temp_Efi_fileProtocol,
+                    pathUtf16Le + targetPathStrIndex,
+                    EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_CREATE,
+                    EFI_FILE_DIRECTORY
+                    );
+                Efi_Wrapper(
+                    Efi_fileProtocol->Close,
+                    Efi_fileProtocol);
+                if(status) {
+                    return NULL;//失敗
+                }
+
+                Efi_fileProtocol = temp_Efi_fileProtocol;
+                targetPathStrIndex = i+1;
+            }
+
+            EFI_FILE_PROTOCOL* temp_Efi_fileProtocol;
+            status = Efi_Wrapper(
+                Efi_fileProtocol->Open,
+                Efi_fileProtocol,
+                &temp_Efi_fileProtocol,
+                pathUtf16Le + targetPathStrIndex,
+                EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_CREATE,
+                0);
+            Efi_Wrapper(
+                Efi_fileProtocol->Close,
+                Efi_fileProtocol);
+            Efi_fileProtocol = temp_Efi_fileProtocol;
+            if(status) return NULL;
+        }else {
+            EFI_FILE_PROTOCOL* temp_Efi_fileProtocol;
+            status = Efi_Wrapper(
+                Efi_fileProtocol->Open,
+                Efi_fileProtocol,
+                &temp_Efi_fileProtocol,
+                pathUtf16Le,
+                openMode,
+                0
+                );
+            Efi_Wrapper(
+                Efi_fileProtocol->Close,
+                Efi_fileProtocol);
+            if(status) {
+                return NULL;
+            }
+            Efi_fileProtocol = temp_Efi_fileProtocol;
+        }
     }
 
     return Efi_fileProtocol;
@@ -372,3 +408,18 @@ uintn File_WriteFromMem(const ascii path[], uintn buffSize, void* buff) {
 }
 
 
+//ファイルの削除
+uintn File_Remove(const ascii path[]) {
+    if(path == NULL) return 1;
+
+    uintn status;
+
+    EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path, EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE);
+    if(Efi_fileProtocol == NULL) return 2;
+
+    status = Efi_Wrapper(
+        Efi_fileProtocol->Delete,
+        Efi_fileProtocol);
+    if(status) return 3;
+    return 0;
+}

@@ -20,4 +20,6 @@ uintn File_OpenAndMMapFile(const ascii path[], uintn buffSize, void* buff);
 
 uintn File_WriteFromMem(const ascii path[], uintn buffSize, void* buff);
 
+uintn File_Remove(const ascii path[]);
+
 #endif

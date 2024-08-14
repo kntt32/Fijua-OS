@@ -15,8 +15,11 @@
 .global App_Syscall_GetDirEntryByPath
 .global App_Syscall_MMapFile
 .global App_Syscall_WriteFileFromMem
-
+.global App_Syscall_RemoveFile
+.global App_Syscall_MkDir
 .global App_Syscall_ShutDown
+.global App_Syscall_AllocPage
+.global App_Syscall_FreePages
 
 .text
 
@@ -105,8 +108,27 @@ App_Syscall_WriteFileFromMem:
     callq *(0x100000)
     ret
 
+App_Syscall_RemoveFile:
+    mov $17, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_MkDir:
+    mov $18, %rax
+    callq *(0x100000)
+    ret
 
 App_Syscall_ShutDown:
-    mov $18, %rax
+    mov $19, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_AllocPage:
+    mov $20, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_FreePages:
+    mov $21, %rax
     callq *(0x100000)
     ret

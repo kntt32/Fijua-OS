@@ -13,6 +13,7 @@
 #include "message.h"
 #include "functions.h"
 #include "file.h"
+#include "memory.h"
 
 #define Syscall_SyscallAddr ((void**)0x100000)
 
@@ -153,6 +154,8 @@ sintn Syscall_GetStdOutTaskId(out uint16* taskId) {
     *taskId = Task_GetStdOut(Task_GetRunningTaskId());
     if(taskId == 0) return 1;
 
+    Task_Yield();
+
     return 0;
 }
 
@@ -181,6 +184,9 @@ sintn Syscall_StdOut(in const ascii str[], uintn count) {
             Syscall_SendIPCMessage(sendToTaskId, 0, str+i*32);
         }
     }
+
+    Task_Yield();
+
     return 0;
 }
 
@@ -245,12 +251,15 @@ sintn Syscall_StdOut_Cls(void) {
 
 //ディレクトリの内容物を取得
 sintn Syscall_GetFileList(const ascii path[], uintn pathLength, uintn* buffCount, File_DirectoryEntry buff[]) {
+    Task_Yield();
+
     for(uintn i=0; i<pathLength; i++) {
         if(path[i] == '\0') {
             if(File_GetDirectory(path, buffCount, buff)) return 1;
             return 0;
         }
     }
+
     return 2;
 }
 
@@ -258,6 +267,8 @@ sintn Syscall_GetFileList(const ascii path[], uintn pathLength, uintn* buffCount
 //パスからディレクトリエントリ取得
 sintn Syscall_GetDirEntryByPath(const ascii path[], uintn pathLength, File_DirectoryEntry* buff) {
     if(path == NULL || buff == NULL) return 1;
+
+    Task_Yield();
 
     for(uintn i=0; i<pathLength; i++) {
         if(path[i] == '\0') {
@@ -275,6 +286,8 @@ sintn Syscall_GetDirEntryByPath(const ascii path[], uintn pathLength, File_Direc
 sintn Syscall_MMapFile(const ascii path[], uintn pathLength, uintn buffSize, void* buff) {
     if(path == NULL || buffSize == 0 || buff == NULL) return 1;
 
+    Task_Yield();
+
     for(uintn i=0; i<pathLength; i++) {
         if(path[i] == '\0') {
             if(File_OpenAndMMapFile(path, buffSize, buff)) return -1;
@@ -290,6 +303,8 @@ sintn Syscall_MMapFile(const ascii path[], uintn pathLength, uintn buffSize, voi
 sintn Syscall_WriteFileFromMem(const ascii path[], uintn pathLength, uintn buffSize, void* buff) {
     if(path == NULL || (buffSize != 0 && buff == NULL)) return 1;
 
+    Task_Yield();
+
     for(uintn i=0; i<pathLength; i++) {
         if(path[i] == '\0') {
             if(File_WriteFromMem(path, buffSize, buff)) return -1;
@@ -302,6 +317,53 @@ sintn Syscall_WriteFileFromMem(const ascii path[], uintn pathLength, uintn buffS
 
 
 //ファイル消去
+sintn Syscall_RemoveFile(const ascii path[], uintn pathLength) {
+    if(path == NULL || pathLength == 0) return 1;
+
+    Task_Yield();
+
+    for(uintn i=0; i<pathLength; i++) {
+        if(path[i] == '\0') {
+            if(File_Remove(path)) return -1;
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+
+//ディレクトリ作成
+sintn Syscall_MkDir(const ascii path[], uintn pathLength) {
+    if(path == NULL || pathLength == 0) return 1;
+
+    Task_Yield();
+
+    uintn status;
+
+    ascii path_temp[pathLength+3];
+    for(uintn i=0; i<pathLength; i++) {
+        path_temp[i] = path[i];
+        if(path[i] == '\0') {
+            path_temp[i] = '/';
+            path_temp[i+1] = 'd';
+            path_temp[i+2] = '\0';
+            break;
+        }
+        if(i == pathLength-1 && path[i] != '\0') {
+            return 2;
+        }
+    }
+
+    ascii buff[1];
+    buff[0] = '\0';
+    status = File_WriteFromMem(path_temp, 1, buff);
+    if(status) return 3;
+
+    File_Remove(path_temp);
+
+    return 0;
+}
 
 
 //シャットダウン
@@ -316,4 +378,45 @@ sintn Syscall_ShutDown(void) {
 }
 
 
-//メモリ確保
+//ページごと(4KiB)のメモリ確保 *pageAddrにメモリアドレスが返される
+sintn Syscall_AllocPage(uintn pages, void** pageAddr) {
+    Task_Yield();
+
+    if(pages == 0) {
+        *pageAddr = NULL;
+        return 0;
+    }
+
+    uint16 taskId = Task_GetRunningTaskId();
+    if(taskId == 0) return -1;
+
+    *pageAddr = Memory_AllocPages(taskId, pages);
+    if(pageAddr == NULL) return -2;
+
+    return 0;
+}
+
+
+//メモリ解放 pageAddrからpages分メモリ解放する
+sintn Syscall_FreePages(uintn pages, void* pageAddr) {
+    if(pageAddr == NULL) return 1;
+    if(pages == 0) return 2;
+
+    Task_Yield();
+
+    uint16 taskId = Task_GetRunningTaskId();
+    if(taskId == 0) return -1;
+
+    Memory_FreePages(taskId, pages, pageAddr);
+
+    return 0;
+}
+
+
+//リロケータブルELF形式実行可能ファイルを実行
+sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
+    Task_Yield();
+
+    return 1;
+}
+

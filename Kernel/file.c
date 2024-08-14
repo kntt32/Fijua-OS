@@ -195,11 +195,17 @@ static EFI_FILE_PROTOCOL* File_GetHandleByPath(const ascii path[], uint64 openMo
     uintn status;
 
     uintn pathLength = Functions_CountStr(path);
-    uint16 pathUtf16Le[pathLength+1];
+    uint16 pathUtf16Le[pathLength+2];
     uintn pathDepth;
-    status = File_ConvertPath(path, pathUtf16Le, &pathDepth);
-    if(status) {
-        return NULL;//無効なパス
+    if(path[0] == '\0' || (path[0] == '/' && path[1] == '\0')) {
+        pathUtf16Le[0] = L'\0';
+        pathUtf16Le[1] = L'\0';
+        pathDepth = 0;
+    }else {
+        status = File_ConvertPath(path, pathUtf16Le, &pathDepth);
+        if(status) {
+            return NULL;//無効なパス
+        }
     }
 
     EFI_FILE_PROTOCOL* Efi_fileProtocol;

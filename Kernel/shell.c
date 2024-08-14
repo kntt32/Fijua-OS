@@ -354,7 +354,7 @@ void Shell_Cmd_Ls(const ascii cmdInput[Shell_DefaultBuffSize], const ascii worki
         App_Syscall_StdOut("ls: Invalid Path\n", sizeof("ls: Invalid Path\n"));
         return;
     }
-
+    
     //ディレクトリエントリの取得
     uintn buffCount = 0;
     App_Syscall_GetFileList(absPath, Shell_DefaultBuffSize, &buffCount, NULL);

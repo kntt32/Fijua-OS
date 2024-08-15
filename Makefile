@@ -5,17 +5,15 @@ OVMFFDPATH := tool/OVMF.fd
 endif
 
 
-build: buildboot buildkernel
-
-buildkernel:
+build:
 	make -C Kernel
-
-buildboot:
 	make -C Boot
+	make -C App
 
 clean:
 	make -C Kernel clean
 	make -C Boot clean
+	make -C App clean
 	
 
 run:

@@ -12,8 +12,10 @@ build: a.elf
 clean:
 ifeq ($(OS), Windows_NT)
 	del *.o *.elf
+	del elfloader.c elfloader.h
 else
 	rm *.o *.elf
+	rm elfloader.c elfloader.h
 endif
 
 a.elf: main.o font.o bootwrapper.o x64.o console.o timer.o functions.o queue.o memory.o graphic.o task.o  test.o layer.o mouse.o keyboard.o syscall.o message.o terminal.o shell.o app_x64.o file.o gui.o
@@ -43,12 +45,25 @@ message.o: message.c queue.h message.h task.h functions.h
 file.o: file.c file.h console.h x64.h functions.h
 gui.o: gui.c gui.h
 
-terminal.o: terminal.c graphic.h queue.h task.h terminal.h file.h app_x64.h
-shell.o: shell.c graphic.h queue.h task.h shell.h file.h app_x64.h
+terminal.o: terminal.c graphic.h queue.h task.h terminal.h file.h
+shell.o: shell.c graphic.h queue.h task.h shell.h file.h
 app_x64.o: app_x64.s
 
 test.o: test.c test.h queue.h task.h graphic.h functions.h console.h
 
+elfloader.c:
+ifeq ($(OS), Windows_NT)
+	copy ..\lib\elfloader.c elfloader.c
+else
+	cp ../lib/elfloader.c elfloader.c
+endif
+
+app_x64.s:
+ifeq ($(OS), Windows_NT)
+	copy ..\lib\app_x64.s app_x64.s
+else
+	cp ../lib/app_x64.s app_x64.s
+endif
 
 %.o: %.c
 	$(CC) -I $(INCLUDE) -Wall -Wextra --target=$(TARGET) -fshort-wchar -ffreestanding -mno-red-zone -c -O2 $<

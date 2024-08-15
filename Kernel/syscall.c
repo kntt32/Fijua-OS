@@ -417,6 +417,8 @@ sintn Syscall_FreePages(uintn pages, void* pageAddr) {
 sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
     Task_Yield();
 
+    
+
     return 1;
 }
 

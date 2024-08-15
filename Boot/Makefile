@@ -12,8 +12,10 @@ build: a.efi
 clean:
 ifeq ($(OS), Windows_NT)
 	del *.o *.efi
+	del elfloader.c elfloader.h
 else
 	rm *.o *.efi
+	rm elfloader.c elfloader.h
 endif
 
 a.efi: main.o elfloader.o subroutine.o
@@ -24,9 +26,17 @@ else
 	cp a.efi ../disk/EFI/BOOT/BOOTX64.EFI
 endif
 
-main.o: main.c elfloader.h subroutine.h
+main.o: main.c subroutine.h
 
-elfloader.o: elfloader.c elfloader.h
+elfloader.o: elfloader.c
+
+elfloader.c:
+ifeq ($(OS), Windows_NT)
+	copy ..\lib\elfloader.c elfloader.c
+else
+	cp ../lib/elfloader.c elfloader.c
+endif
+
 
 %.o: %.c
 	$(CC) -I $(INCLUDE) -target $(TARGET) -mno-red-zone -fno-stack-protector -fshort-wchar -Wall -Wextra -c $<

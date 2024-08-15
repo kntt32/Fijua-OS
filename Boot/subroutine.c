@@ -7,7 +7,7 @@
 #include <efi_loaded_image_protocol.h>
 #include <kernel.h>
 
-#include "elfloader.h"
+#include <elfloader.h>
 #include "subroutine.h"
 
 #define NULL ((void*)0)

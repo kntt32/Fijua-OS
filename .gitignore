@@ -52,6 +52,11 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-/disk/EFI/BOOT/**
-!/disk/EFI/BOOT/**/
-!/disk/EFI/BOOT/**/.gitkeep
+/Boot/elfloader.c
+/Boot/elfloader.h
+
+/Kernel/elfloader.c
+/Kernel/elfloader.h
+
+/Kernel/app_x64.s
+/App/app_x64.s

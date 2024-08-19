@@ -22,4 +22,4 @@ ifeq ($(OS), Windows_NT)
 else
 	rm ./disk/NvVars
 endif
-	qemu-system-x86_64 --monitor stdio -usb -device usb-mouse -device usb-kbd -bios $(OVMFFDPATH) -hda fat:rw:disk
+	qemu-system-x86_64 --monitor stdio -usb -device usb-mouse -device usb-kbd -bios $(OVMFFDPATH) -m 256M  -hda fat:rw:disk

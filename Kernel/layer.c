@@ -412,7 +412,7 @@ static void Layer_Update_DrawWindow(uint8* layer_redrawFlag_Or, uintn blockXCoun
 
 //Layerを描画
 void Layer_Update(void) {
-    if(layer.changedFlag == 0) return;
+    if(layer.changedFlag == 0 && layer.drawBackgroundFlag == 0) return;
     layer.isDrawingFlag = 1;
     layer.changedFlag = 0;
 

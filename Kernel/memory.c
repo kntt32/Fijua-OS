@@ -70,6 +70,29 @@ void* Memory_AllocPages(uint16 taskId, uintn pages) {
 }
 
 
+//ページの所有権を移動する
+uintn Memory_Move(uint16 taskId, uint16 newTaskId, uintn pages, void* pageaddr) {
+    if(taskId == Memory_MemType_Unavailable || taskId == Memory_MemType_Available) return 1;
+    if(pageaddr == NULL) return 2;
+    if((((uintn)pageaddr)&0xfff) != 0) return 3;
+    if(Memory_PageCount < (((uintn)pageaddr)>>12)+pages) return 4;
+    if(pages == 0) return 0;
+
+    Mutex_Lock(&Memory_Mutex);
+
+    uintn pageCount = ((uintn)pageaddr)>>12;
+    for(uintn i=0; i<pages; i++) {
+        if(Memory_MemMap[i+pageCount] == taskId) {
+            Memory_MemMap[i+pageCount] = newTaskId;
+        }
+    }
+
+    Mutex_UnLock(&Memory_Mutex);
+
+    return 0;
+}
+
+
 //free pages
 //if indecaded page isn't owned by ownerid, it is ignored.
 uintn Memory_FreePages(uint16 taskId, uintn pages, void* pageaddr) {

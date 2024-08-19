@@ -483,6 +483,7 @@ sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
     Task_ChangeStdIn(terminal, newTaskId);
     Task_ChangeStdOut(terminal, newTaskId);
 
+    Memory_Move(runningTaskId, newTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
 
     Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
 

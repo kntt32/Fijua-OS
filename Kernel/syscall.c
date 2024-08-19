@@ -151,11 +151,11 @@ sintn Syscall_Exit(in sintn retcode) {
 }
 
 
-//stdioのTaskIdを取得
-sintn Syscall_GetStdOutTaskId(out uint16* taskId) {
+//stdioのTaskIoを取得
+sintn Syscall_GetStdIoTaskId(out uint16* taskId) {
     if(taskId == NULL) return 1;
 
-    *taskId = Task_GetStdOut(Task_GetRunningTaskId());
+    *taskId = Task_GetStdIo(Task_GetRunningTaskId());
     if(taskId == 0) return 1;
 
     Task_Yield();
@@ -166,7 +166,7 @@ sintn Syscall_GetStdOutTaskId(out uint16* taskId) {
 
 //stdioに文字列出力 count文字分までの表示を保証する
 sintn Syscall_StdOut(in const ascii str[], uintn count) {
-    uint16 sendToTaskId = Task_GetStdOut(Task_GetRunningTaskId());
+    uint16 sendToTaskId = Task_GetStdIo(Task_GetRunningTaskId());
     if(sendToTaskId == 0) return -1;
     if(count == 0) {
         Syscall_SendIPCMessage(sendToTaskId, 2, "\0");
@@ -199,7 +199,7 @@ sintn Syscall_StdOut(in const ascii str[], uintn count) {
 sintn Syscall_StdIn(out ascii str[], uintn strBuffSize) {
     if(str == NULL || strBuffSize == 0) return 1;
 
-    uint16 sendToTaskId = Task_GetStdIn(Task_GetRunningTaskId());
+    uint16 sendToTaskId = Task_GetStdIo(Task_GetRunningTaskId());
     if(sendToTaskId == 0) return -1;
 
     Syscall_SendIPCMessage(sendToTaskId, 1, NULL);
@@ -244,7 +244,7 @@ sintn Syscall_StdIn(out ascii str[], uintn strBuffSize) {
 
 //stdoutの画面をクリア
 sintn Syscall_StdOut_Cls(void) {
-    uint16 sendToTaskId = Task_GetStdOut(Task_GetRunningTaskId());
+    uint16 sendToTaskId = Task_GetStdIo(Task_GetRunningTaskId());
     if(sendToTaskId == 0) return -1;
 
     Syscall_SendIPCMessage(sendToTaskId, 3, NULL);
@@ -467,21 +467,20 @@ sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
         return -8;
     }
 
-    uint16 terminal = Task_New(Terminal_Main, 0, 0);
+    uint16 terminal = Task_New(Terminal_Main, 0);
     if(terminal == 0) {
         Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
         Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
         return -9;
     }
-    uint16 newTaskId = Task_New(entryPoint, terminal, terminal);
+    uint16 newTaskId = Task_New(entryPoint, terminal);
     if(newTaskId == 0) {
         Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
         Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
         Task_Delete(terminal);
         return -10;
     }
-    Task_ChangeStdIn(terminal, newTaskId);
-    Task_ChangeStdOut(terminal, newTaskId);
+    Task_ChangeStdIo(terminal, newTaskId);
 
     Memory_Move(runningTaskId, newTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
 

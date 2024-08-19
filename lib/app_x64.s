@@ -7,7 +7,7 @@
 .global App_Syscall_CheckMessage
 .global App_Syscall_SendIPCMessage
 .global App_Syscall_Exit
-.global App_Syscall_GetStdOutTaskId
+.global App_Syscall_GetStdIoTaskId
 .global App_Syscall_StdOut
 .global App_Syscall_StdIn
 .global App_Syscall_StdOut_Cls
@@ -69,7 +69,7 @@ App_Syscall_Exit:
     callq *(0x100000)
     ret
 
-App_Syscall_GetStdOutTaskId:
+App_Syscall_GetStdIoTaskId:
     mov $9, %rax
     callq *(0x100000)
     ret

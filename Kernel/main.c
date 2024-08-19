@@ -43,10 +43,9 @@ int Main(KernelInputStruct* kernelInput) {
 
     File_Init();
 
-    uint16 terminal = Task_New(Terminal_Main, 0, 0);
-    uint16 shell = Task_New(Shell_Main, terminal, terminal);
-    Task_ChangeStdIn(terminal, shell);
-    Task_ChangeStdOut(terminal, shell);
+    uint16 terminal = Task_New(Terminal_Main, 0);
+    uint16 shell = Task_New(Shell_Main, terminal);
+    Task_ChangeStdIo(terminal, shell);
 
 /*
     Layer_Window_New(2, "testWindow", 10, 10, 300, 400);

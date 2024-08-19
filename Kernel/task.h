@@ -40,8 +40,7 @@ typedef struct {
 
 typedef struct {
     uint16 taskId;//0,1は無効、2はカーネル用に予約済み
-    uint16 stdin_taskId;//標準入力を送信するtaskId 0は未設定
-    uint16 stdout_taskId;//標準出力を送信するtaskId 0は未設定
+    uint16 stdio_taskId;//StdIoに使うTaskId
     void* stackPtr;
     sintn (*taskEntry)(void);
     Queue messages;
@@ -70,7 +69,7 @@ typedef struct {
 
 void Task_Init(void);
 
-uint16 Task_New(sintn (*taskEntry)(void), uint16 stdin_taskId, uint16 stdout_taskId);
+uint16 Task_New(sintn (*taskEntry)(void), uint16 stdio_taskId);
 void Task_Delete(uint16 taskId);
 uintn Task_EnQueueTask(uint16 taskId);
 
@@ -80,10 +79,8 @@ void Task_Halt(void);
 void Task_ChangeContext(void);
 
 uint16 Task_GetRunningTaskId(void);
-uint16 Task_GetStdIn(uint16 taskId);
-uint16 Task_GetStdOut(uint16 taskId);
-void Task_ChangeStdIn(uint16 taskId, uint16 stdin_taskId);
-void Task_ChangeStdOut(uint16 taskId, uint16 stdout_taskId);
+uint16 Task_GetStdIo(uint16 taskId);
+void Task_ChangeStdIo(uint16 taskId, uint16 stdio_taskId);
 
 uintn Task_Messages_EnQueue(uint16 taskId, const Task_Message* message);
 uintn Task_Messages_Check(uint16 taskId, Task_Message* message);

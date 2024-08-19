@@ -20,6 +20,7 @@
 .global App_Syscall_ShutDown
 .global App_Syscall_AllocPage
 .global App_Syscall_FreePages
+.global App_Syscall_RunApp
 
 .text
 
@@ -130,5 +131,10 @@ App_Syscall_AllocPage:
 
 App_Syscall_FreePages:
     mov $21, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_RunApp:
+    mov $22, %rax
     callq *(0x100000)
     ret

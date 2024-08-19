@@ -665,7 +665,20 @@ void Shell_Cmd_MkDir(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingP
 
 //runコマンド　ELF形式の実行可能ファイルを実行する
 void Shell_Cmd_Run(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]) {
-    App_Syscall_StdOut("Coming soon\n", sizeof("Coming soon\n"));
+    uintn status;
+
+    ascii absPath[Shell_DefaultBuffSize];
+    status = Shell_Cmd_GetAbsPath(cmdInput, workingPath, absPath);
+    if(status) {
+        App_Syscall_StdOut("run: Invalid Path\n", sizeof("run: Invalid Path\n"));
+        return;
+    }
+
+    status = App_Syscall_RunApp(absPath, Shell_DefaultBuffSize);
+    if(status) {
+        App_Syscall_StdOut("run: Failed\n", sizeof("run: Failed\n"));
+    }
+
     return;
 }
 

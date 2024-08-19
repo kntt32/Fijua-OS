@@ -15,6 +15,10 @@
 #include "file.h"
 #include "memory.h"
 
+#include "terminal.h"
+
+#include <elfloader.h>
+
 #define Syscall_SyscallAddr ((void**)0x100000)
 
 extern KernelInputStruct* KernelInput;
@@ -417,8 +421,71 @@ sintn Syscall_FreePages(uintn pages, void* pageAddr) {
 sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
     Task_Yield();
 
-    
+    //ファイルを開く
+    File_DirectoryEntry dirEntBuff;
+    if(File_GetDirectoryEntryByPath(path, &dirEntBuff)) return -1;
 
-    return 1;
+    uint16 runningTaskId = Task_GetRunningTaskId();
+    if(runningTaskId == 0) return -2;
+
+    uint8* elfbuff = Memory_AllocPages(runningTaskId, (dirEntBuff.size + 0xfff)>>12);
+    if(elfbuff == NULL) return -3;
+
+    if(File_OpenAndMMapFile(path, dirEntBuff.size, elfbuff)) {
+        Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+        return -4;
+    }
+
+    //ファイル展開
+    uintn expandSize = 0;
+    uintn loadAddr = 0;
+
+    if(!ElfLoader_CheckDyn(elfbuff)) {
+        return 1;
+    }
+    if(ElfLoader_GetLoadArea(elfbuff, &loadAddr, &expandSize)) {
+        Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+        return -5;
+    }
+
+    uint8* elfExpandBuff = Memory_AllocPages(runningTaskId, (expandSize + 0xfff)>>12);
+    if(elfExpandBuff == NULL) {
+        Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+        return -6;
+    }
+
+    if(ElfLoader_Load(elfbuff, (uintn)elfExpandBuff)) {
+        Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
+        Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+        return -7;
+    }
+
+    void* entryPoint = NULL;
+    if(ElfLoader_GetProperty(elfbuff, elfExpandBuff, &entryPoint, NULL)) {
+        Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
+        Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+        return -8;
+    }
+
+    uint16 terminal = Task_New(Terminal_Main, 0, 0);
+    if(terminal == 0) {
+        Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
+        Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+        return -9;
+    }
+    uint16 newTaskId = Task_New(entryPoint, terminal, terminal);
+    if(newTaskId == 0) {
+        Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
+        Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+        Task_Delete(terminal);
+        return -10;
+    }
+    Task_ChangeStdIn(terminal, newTaskId);
+    Task_ChangeStdOut(terminal, newTaskId);
+
+
+    Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+
+    return 0;
 }
 

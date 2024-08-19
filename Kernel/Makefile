@@ -12,13 +12,13 @@ build: a.elf
 clean:
 ifeq ($(OS), Windows_NT)
 	del *.o *.elf
-	del elfloader.c elfloader.h
+	del elfloader.c elfloader.h app_x64.s
 else
 	rm *.o *.elf
-	rm elfloader.c elfloader.h
+	rm elfloader.c elfloader.h app_x64.s
 endif
 
-a.elf: main.o font.o bootwrapper.o x64.o console.o timer.o functions.o queue.o memory.o graphic.o task.o  test.o layer.o mouse.o keyboard.o syscall.o message.o terminal.o shell.o app_x64.o file.o gui.o
+a.elf: main.o font.o bootwrapper.o x64.o console.o timer.o functions.o queue.o memory.o graphic.o task.o  test.o layer.o mouse.o keyboard.o syscall.o message.o terminal.o shell.o app_x64.o file.o gui.o elfloader.o
 	ld.lld --entry entrypoint -z norelro --static --image-base 0x200000 -o a.elf $^
 ifeq ($(OS), Windows_NT)
 	copy a.elf ..\disk\kernel.elf
@@ -40,7 +40,7 @@ graphic.o: graphic.c graphic.h graphic_mouse_bitmap
 task.o: task.c queue.h task.h memory.h x64.h graphic.h layer.h message.h console.h
 layer.o: layer.c memory.h graphic.h layer.h mouse.h queue.h task.h font.h message.h
 mouse.o: mouse.c mouse.h graphic.h layer.h functions.h console.h x64.h
-syscall.o: syscall.c syscall.h queue.h task.h x64.h console.h layer.h graphic.h font.h message.h functions.h file.h memory.h
+syscall.o: syscall.c syscall.h queue.h task.h x64.h console.h layer.h graphic.h font.h message.h functions.h file.h memory.h terminal.h
 message.o: message.c queue.h message.h task.h functions.h
 file.o: file.c file.h console.h x64.h functions.h
 gui.o: gui.c gui.h
@@ -48,6 +48,8 @@ gui.o: gui.c gui.h
 terminal.o: terminal.c graphic.h queue.h task.h terminal.h file.h
 shell.o: shell.c graphic.h queue.h task.h shell.h file.h
 app_x64.o: app_x64.s
+
+elfloader.o: elfloader.c
 
 test.o: test.c test.h queue.h task.h graphic.h functions.h console.h
 

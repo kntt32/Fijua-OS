@@ -1,5 +1,5 @@
 #include <elf.h>
-#include "elfloader.h"
+#include <elfloader.h>
 
 #define NULL ((void*)0)
 
@@ -55,6 +55,14 @@ unsigned int ElfLoader_GetProperty(in const void* file, in optional void* loadAd
 void cac(uintn);
 
 
+//check DYN
+unsigned int ElfLoader_CheckDyn(in const void* file) {
+    Elf_Header* elfHeader = (Elf_Header*)file;
+    if(elfHeader->e_type == Elf_Header_ET_DYN) return 1;
+    return 0;
+}
+
+
 //Expand elf excutable file
 unsigned int ElfLoader_Load(in const void* file, in uintn loadAddr) {
     if(file == NULL) return 1;
@@ -68,12 +76,11 @@ unsigned int ElfLoader_Load(in const void* file, in uintn loadAddr) {
     //check loadAddr
     switch(elfHeader->e_type) {
         case Elf_Header_ET_EXEC:
-            loadAddr = 0;
             break;
         case Elf_Header_ET_DYN:
             break;
         default:
-            return 2;
+            return 3;
     }
 
     //expand elf

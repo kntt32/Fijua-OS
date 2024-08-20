@@ -13,6 +13,8 @@ typedef struct {
         Task_Message_CloseWindow,
         Task_Message_Quit,
         Task_Message_KeyPushed,
+        Task_Message_MouseLayerEvent,
+        Task_Message_Private_LayerEvent,
         Task_Message_ENUMCOUNT
     } type;
 
@@ -34,6 +36,17 @@ typedef struct {
             ascii asciiCode;
             uint16 scanCode;
         } KeyPushed;
+
+        struct {
+            uintn layerId;
+            sintn x;
+            sintn y;
+            uintn leftButton;
+        } MouseLayerEvent;
+
+        struct {
+            void* layer;
+        } Private_LayerEvent;
     } data;
 } Task_Message;
 

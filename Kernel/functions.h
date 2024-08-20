@@ -19,4 +19,6 @@ sintn Functions_StrCmp(const ascii str1[], const ascii str2[]);
 
 uintn Functions_CountStr(const ascii str[]);
 
+uintn Functions_StartShell(void);
+
 #endif

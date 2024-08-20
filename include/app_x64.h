@@ -14,7 +14,7 @@
 #define KEYBOARD_SCANCODE_PAGEDOWN (0x0a)
 #define KEYBOARD_SCANCODE_ESC (0x17)
 
-sintn App_Syscall_NewWindow(out uintn* layerId, in uintn x, in uintn y, in uintn width, in uintn height, in ascii title[]);
+sintn App_Syscall_NewWindow(out uintn* layerId, in sintn x, in sintn y, in uintn width, in uintn height, in ascii title[]);
 
 sintn App_Syscall_CloseWindow(in uintn layerId);
 
@@ -59,5 +59,13 @@ sintn App_Syscall_AllocPage(uintn pages, void** pageAddr);
 sintn App_Syscall_FreePages(uintn pages, void* pageAddr);
 
 sintn App_Syscall_RunApp(const ascii path[], uintn pathLength);
+
+sintn App_Syscall_ExitStdIo(void);
+
+sintn App_Syscall_Confirm(const ascii* question, uintn strlength);
+
+sintn App_Syscall_GetThisTaskId(out uint16* taskId);
+
+sintn App_Syscall_GetDisplaySize(optional out uintn* width, optional out uintn* height);
 
 #endif

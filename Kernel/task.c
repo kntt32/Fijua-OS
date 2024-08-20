@@ -267,10 +267,20 @@ uint16 Task_GetStdIo(uint16 taskId) {
 void Task_ChangeStdIo(uint16 taskId, uint16 stdio_taskId) {
     sintn taskIndex = Task_GetIndexOfTaskList(taskId);
     if(taskIndex < 0) return;
-    sintn taskIndex_stdio = Task_GetIndexOfTaskList(stdio_taskId);
-    if(taskIndex_stdio < 0) return;
+
+    if(stdio_taskId != 0) {
+        sintn taskIndex_stdio = Task_GetIndexOfTaskList(stdio_taskId);
+        if(taskIndex_stdio < 0) return;
+    }
 
     task.Table.list[taskIndex].stdio_taskId = stdio_taskId;
+    for(uintn i=0; i<task.Table.count; i++) {
+        if(task.Table.list[i].stdio_taskId == taskId && task.Table.list[i].taskId != stdio_taskId) {
+            Task_Message message;
+            message.type = Task_Message_Quit;
+            Message_EnQueue(task.Table.list[i].taskId, &message);
+        }
+    }
 
     return;
 }

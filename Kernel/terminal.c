@@ -4,7 +4,7 @@
 #include "task.h"
 #include "terminal.h"
 #include "file.h"
-#include <app_syscall_x64.h>
+#include <app_x64.h>
 
 #include "functions.h"
 
@@ -14,6 +14,7 @@
 
 typedef struct {
     uintn layerId;
+    uintn layerId_setted;
 
     uintn cursorX;
     uintn cursorY;
@@ -43,13 +44,22 @@ sintn Terminal_Main(void) {
     Terminal terminal;
 
     Terminal_Init(&terminal);
-    if(App_Syscall_NewWindow(&(terminal.layerId), 500, 100, Terminal_StrWidth*8, Terminal_StrHeight*16, "Terminal")) return -1;
-    App_Syscall_DrawSquare(terminal.layerId, 0, 0, Terminal_StrWidth*8, Terminal_StrHeight*16, Terminal_BackgroundColor);
+    
 
     Task_Message message;
 
+    App_Syscall_YieldCpu();
+
     while(1) {
         App_Syscall_ReadMessage(&message);
+        if(message.type == Task_Message_Quit) {
+            App_Syscall_Exit(0);
+        }
+        if(!terminal.layerId_setted) {
+            if(App_Syscall_NewWindow(&(terminal.layerId), 500, 100, Terminal_StrWidth*8, Terminal_StrHeight*16, "Terminal")) return -1;
+            App_Syscall_DrawSquare(terminal.layerId, 0, 0, Terminal_StrWidth*8, Terminal_StrHeight*16, Terminal_BackgroundColor);
+            terminal.layerId_setted = 1;
+        }
         switch(message.type) {
             case Task_Message_KeyPushed:
                 if(terminal.waitingKeyFlag) {
@@ -107,14 +117,8 @@ sintn Terminal_Main(void) {
             case Task_Message_CloseWindow:
                 App_Syscall_Exit(0);
             case Task_Message_Nothing:
-                Terminal_Print(&terminal, "Message Received: Nothing\n");
                 break;
-            case Task_Message_Quit:
-                App_Syscall_Exit(0);
             default:
-                {
-                Terminal_Print(&terminal, "Message Received: UnKnown\n");
-                }
                 break;
         }
     }
@@ -128,6 +132,7 @@ void Terminal_Init(Terminal* this) {
     if(this == NULL) return;
 
     this->layerId = 0;
+    this->layerId_setted = 0;
 
     this->cursorX = 0;
     this->cursorY = 0;

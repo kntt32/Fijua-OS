@@ -7,6 +7,9 @@
 #include "task.h"
 #include "console.h"
 
+#include "shell.h"
+#include "terminal.h"
+
 extern KernelInputStruct* KernelInput;
 
 //HaltLoop
@@ -89,8 +92,6 @@ void Functions_UTF16LE2ASCII_Str(uintn count, const uint16 input[], ascii output
 
 //asciiをUTF-16に変換　x64のみ
 void Functions_ASCII2UTF16LE(ascii input, uint16* output) {
-    uint8* out_uint8 = (uint8*)output;
-
     output[0] = input;
     output[1] = 0;
 
@@ -146,4 +147,19 @@ uintn Functions_CountStr(const ascii str[]) {
     for(uintn i=0; 1; i++) {
         if(str[i] == '\0') return i;
     }
+}
+
+
+//シェル起動
+uintn Functions_StartShell(void) {
+    uint16 terminal = Task_New(Terminal_Main, 0);
+    if(terminal == 0) return 1;
+    uint16 shell = Task_New(Shell_Main, terminal);
+    if(shell == 0) {
+        Task_Delete(terminal);
+        return 2;
+    }
+    Task_ChangeStdIo(terminal, shell);
+
+    return 0;
 }

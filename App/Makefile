@@ -14,6 +14,11 @@ else
 endif
 
 clean:
+ifeq ($(OS), Windows_NT)
+	del app_x64.s
+else
+	rm app_x64.s
+endif
 	make -C FileManager clean
 
 %.o: %.s

@@ -21,6 +21,10 @@
 .global App_Syscall_AllocPage
 .global App_Syscall_FreePages
 .global App_Syscall_RunApp
+.global App_Syscall_ExitStdIo
+.global App_Syscall_Confirm
+.global App_Syscall_GetThisTaskId
+.global App_Syscall_GetDisplaySize
 
 .text
 
@@ -136,5 +140,25 @@ App_Syscall_FreePages:
 
 App_Syscall_RunApp:
     mov $22, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_ExitStdIo:
+    mov $23, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_Confirm:
+    mov $24, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_GetThisTaskId:
+    mov $25, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_GetDisplaySize:
+    mov $26, %rax
     callq *(0x100000)
     ret

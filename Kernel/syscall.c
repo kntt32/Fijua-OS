@@ -35,7 +35,7 @@ void Syscall_Init(void) {
 
 
 //新規ウインドウ作成してLayerIdを返す
-sintn Syscall_NewWindow(out uintn* layerId, in uintn x, in uintn y, in uintn width, in uintn height, in ascii title[]) {
+sintn Syscall_NewWindow(out uintn* layerId, in sintn x, in sintn y, in uintn width, in uintn height, in ascii title[]) {
     if(layerId == NULL) return 1;
 
     uint16 taskId = Task_GetRunningTaskId();
@@ -486,6 +486,92 @@ sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
 
     Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
 
+    return 0;
+}
+
+
+//stdioを使用しない
+sintn Syscall_ExitStdIo(void) {
+    uint16 runningTaskId = Task_GetRunningTaskId();
+    if(runningTaskId == 0) return -1;
+
+    Task_ChangeStdIo(runningTaskId, 0);
+
+    return 0;
+}
+
+
+//二択の質問　Okなら0,Noなら1を返す
+sintn Syscall_Confirm(const ascii* question, uintn strlength) {
+    if(question == NULL) return -1;
+
+    uint16 runningTaskId = Task_GetRunningTaskId();
+    uintn layerId = Layer_Window_New(runningTaskId, "Confirm", 10, 42, 300, 100);
+    if(layerId == 0) return -1;
+
+    Graphic_Color gray = {0xaa, 0xaa, 0xaa};
+    Graphic_Color red = {0xee, 0xaa, 0xaa};
+    Graphic_Color black = {0x00, 0x00, 0x00};
+
+    Syscall_DrawSquare(layerId, 300-52*2, 100-35, 50, 32, gray);
+    Syscall_DrawSquare(layerId, 300-52, 100-35, 50, 32, red);
+
+    Syscall_DrawFont(layerId, 300-52*2+17, 100-35+10, 'O', black);
+    Syscall_DrawFont(layerId, 300-52*2+25, 100-35+10, 'k', black);
+
+    Syscall_DrawFont(layerId, 300-52+17, 100-35+10, 'N', black);
+    Syscall_DrawFont(layerId, 300-52+25, 100-35+10, 'o', black);
+
+    for(uintn i=0; i<strlength; i++) {
+        if(question[i] == '\0') break;
+        Syscall_DrawFont(layerId, 10+i*8, 10, question[i], black);
+    }
+
+    Task_Message message;
+    while(1) {
+        Syscall_ReadMessage(&message);
+        switch(message.type) {
+            case Task_Message_Quit:
+                Syscall_Exit(1);
+            case Task_Message_CloseWindow:
+                Syscall_Exit(1);
+            case Task_Message_MouseLayerEvent:
+                if(!message.data.MouseLayerEvent.leftButton) break;
+                if(message.data.MouseLayerEvent.layerId != layerId) break;
+                //Ok
+                if(300-52*2 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-52*2+50
+                    && 100-35 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 100-35+32) {
+                    Layer_Window_Delete(layerId);
+                    return 0;
+                }
+                //No
+                if(300-52 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-52+50
+                    && 100-35 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 100-35+32) {
+                    Layer_Window_Delete(layerId);
+                    return 1;
+                }
+            default:
+                break;
+        }
+    }
+}
+
+
+//呼び出し元タスクのtaskIdを取得
+sintn Syscall_GetThisTaskId(out uint16* taskId) {
+    if(taskId == NULL) return 1;
+
+    *taskId = Task_GetRunningTaskId();
+    if(*taskId == 0) return -1;
+
+    return 0;
+}
+
+
+//ディスプレイサイズ取得
+sintn Syscall_GetDisplaySize(optional out uintn* width, optional out uintn* height) {
+    if(width != NULL) *width = KernelInput->Graphic.width;
+    if(height != NULL) *height = KernelInput->Graphic.height;
     return 0;
 }
 

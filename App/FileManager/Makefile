@@ -12,16 +12,18 @@ build: a.elf
 clean:
 ifeq ($(OS), Windows_NT)
 	del *.o *.elf
+	del app_x64.s
 else
 	rm *.o *.elf
+	rm app_x64.s
 endif
 
 a.elf: main.o app_x64.o
 	ld.lld --entry main -z norelro --static -pie -o a.elf $^
 ifeq ($(OS), Windows_NT)
-	copy a.elf ..\..\disk\app\kernel.elf
+	copy a.elf ..\..\disk\app\filemanager.elf
 else
-	cp a.elf ../../disk/app/kernel.elf
+	cp a.elf ../../disk/app/filemanager.elf
 endif
 
 main.o: main.c

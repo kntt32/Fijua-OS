@@ -216,6 +216,18 @@ Syscall_AppEnter:#16バイトアライメントの必要なし
     cmp $22, %rax
     je Syscall_AppEnter_Syscall_RunApp
 
+    cmp $23, %rax
+    je Syscall_AppEnter_Syscall_ExitStdIo
+
+    cmp $24, %rax
+    je Syscall_AppEnter_Syscall_Confirm
+
+    cmp $25, %rax
+    je Syscall_AppEnter_Syscall_GetThisTaskId
+
+    cmp $26, %rax
+    je Syscall_AppEnter_Syscall_GetDisplaySize
+
     #無効なシステムコール番号
     mov $-1, %rax
     jmp Syscall_AppEnter_Exit
@@ -310,6 +322,22 @@ Syscall_AppEnter_Syscall_FreePages:
 
 Syscall_AppEnter_Syscall_RunApp:
     call Syscall_RunApp
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_ExitStdIo:
+    call Syscall_ExitStdIo
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_Confirm:
+    call Syscall_Confirm
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_GetThisTaskId:
+    call Syscall_GetThisTaskId
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_GetDisplaySize:
+    call Syscall_GetDisplaySize
     jmp Syscall_AppEnter_Exit
 
 Syscall_AppEnter_Exit:

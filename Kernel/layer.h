@@ -51,6 +51,8 @@ typedef struct {
     } Drag;
     uintn leftButton;
     uintn oldLeftButton;
+
+    uintn changedFlag;
 } Layer_Mouse;
 
 
@@ -58,6 +60,7 @@ typedef struct {
     uintn changedFlag;
     uintn isDrawingFlag;
     uintn drawBackgroundFlag;
+    uint16 taskbar_taskId;
 
     struct {
         uintn count;
@@ -75,7 +78,7 @@ void Layer_Update(void);
 
 void Layer_Mouse_NotifyUpdate(uintn x, uintn y, uintn leftButton);
 
-uintn Layer_Window_New(uint16 taskId, ascii name[], uintn x, uintn y, uintn width, uintn height);
+uintn Layer_Window_New(uint16 taskId, ascii name[], sintn x, sintn y, uintn width, uintn height);
 
 uintn Layer_Window_Delete(uintn layerId);
 
@@ -84,6 +87,8 @@ void Layer_Window_DeleteAll(uint16 taskId);
 uint16 Layer_Window_GettaskId(uintn layerId);
 
 void Layer_Window_Focus(uintn layerId);
+
+void Layer_Window_Hidden(uintn layerId);
 
 void Layer_Window_Flush(uintn layerId);
 
@@ -94,5 +99,7 @@ uintn Layer_Window_GetFrameBuff(uintn layerId, Graphic_FrameBuff* framebuff);
 uint16 Layer_Window_GetFocusedTaskId(void);
 
 void Layer_Window_NotifyUpdate(uintn layerId, uintn x, uintn y, uintn width, uintn height);
+
+void Layer_Taskbar_SetTaskId(uint16 taskId);
 
 #endif

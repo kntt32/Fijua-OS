@@ -259,7 +259,10 @@ sintn Syscall_GetFileList(const ascii path[], uintn pathLength, uintn* buffCount
 
     for(uintn i=0; i<pathLength; i++) {
         if(path[i] == '\0') {
-            if(File_GetDirectory(path, buffCount, buff)) return 1;
+            if(File_GetDirectory(path, buffCount, buff)) {
+                *buffCount = 0;
+                return 1;
+            }
             return 0;
         }
     }
@@ -514,7 +517,7 @@ sintn Syscall_Confirm(const ascii* question, uintn strlength) {
     uintn layerId = Layer_Window_New(runningTaskId, "Confirm", 10, 42, 300, 100);
     if(layerId == 0) return -1;
 
-    Graphic_Color gray = {0xaa, 0xaa, 0xaa};
+    Graphic_Color gray = {0xb0, 0xb0, 0xb0};
     Graphic_Color red = {0xee, 0xaa, 0xaa};
     Graphic_Color black = {0x00, 0x00, 0x00};
 

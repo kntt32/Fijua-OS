@@ -3,7 +3,7 @@
 #include "graphic.h"
 #include "font.h"
 
-static uint8 fontdata_monospace[] = {
+static uint8 fontdata_monospace[16*256] = {
 #include "font_bitmap"
 };
 

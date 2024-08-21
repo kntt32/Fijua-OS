@@ -44,7 +44,7 @@ int Main(KernelInputStruct* kernelInput) {
 
     File_Init();
 
-    uint16 taskbar = Task_New(Taskbar_Main, 0);
+    uint16 taskbar = Task_New(Taskbar_Main, 0, "");
     Layer_Taskbar_SetTaskId(taskbar);
 
     Functions_StartShell();

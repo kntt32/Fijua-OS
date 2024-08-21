@@ -667,14 +667,34 @@ void Shell_Cmd_MkDir(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingP
 void Shell_Cmd_Run(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingPath[Shell_DefaultBuffSize]) {
     uintn status;
 
+    ascii relPath[Shell_DefaultBuffSize];
+    ascii appArg[32] = "";
+    for(uintn i=0; i<Shell_DefaultBuffSize; i++) {
+        relPath[i] = cmdInput[i];
+        if(cmdInput[i] == ' ' || cmdInput[i] == '\0') {
+            relPath[i] = '\0';
+            if(cmdInput[i] == '\0') break;
+            for(uintn k=i+1; k<Shell_DefaultBuffSize; k++) {
+                if(cmdInput[k] != ' ') {
+                    for(uintn j=k; j<k+31; j++) {
+                        appArg[j-k] = cmdInput[j];
+                    }
+                    appArg[31] = '\0';
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
     ascii absPath[Shell_DefaultBuffSize];
-    status = Shell_Cmd_GetAbsPath(cmdInput, workingPath, absPath);
+    status = Shell_Cmd_GetAbsPath(relPath, workingPath, absPath);
     if(status) {
         App_Syscall_StdOut("run: Invalid Path\n", sizeof("run: Invalid Path\n"));
         return;
     }
 
-    status = App_Syscall_RunApp(absPath, Shell_DefaultBuffSize);
+    status = App_Syscall_RunApp(absPath, Shell_DefaultBuffSize, appArg);
     if(status) {
         App_Syscall_StdOut("run: Failed\n", sizeof("run: Failed\n"));
     }

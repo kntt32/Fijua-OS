@@ -58,7 +58,7 @@ sintn App_Syscall_AllocPage(uintn pages, void** pageAddr);
 
 sintn App_Syscall_FreePages(uintn pages, void* pageAddr);
 
-sintn App_Syscall_RunApp(const ascii path[], uintn pathLength);
+sintn App_Syscall_RunApp(const ascii path[], uintn pathLength, optional ascii arg[32]);
 
 sintn App_Syscall_ExitStdIo(void);
 

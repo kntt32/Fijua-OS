@@ -40,7 +40,7 @@ static const Graphic_Color Terminal_BackgroundColor = {0x1b, 0x1d, 0x29};
 static const Graphic_Color Terminal_FontColor = {0xd3, 0xd4, 0xde};
 
 
-sintn Terminal_Main(void) {
+sintn Terminal_Main(ascii arg[32]) {
     Terminal terminal;
 
     Terminal_Init(&terminal);
@@ -56,7 +56,7 @@ sintn Terminal_Main(void) {
             App_Syscall_Exit(0);
         }
         if(!terminal.layerId_setted) {
-            if(App_Syscall_NewWindow(&(terminal.layerId), 500, 100, Terminal_StrWidth*8, Terminal_StrHeight*16, "Terminal")) return -1;
+            if(App_Syscall_NewWindow(&(terminal.layerId), 500, 100, Terminal_StrWidth*8, Terminal_StrHeight*16, arg)) return -1;
             App_Syscall_DrawSquare(terminal.layerId, 0, 0, Terminal_StrWidth*8, Terminal_StrHeight*16, Terminal_BackgroundColor);
             terminal.layerId_setted = 1;
         }

@@ -152,9 +152,9 @@ uintn Functions_CountStr(const ascii str[]) {
 
 //シェル起動
 uintn Functions_StartShell(void) {
-    uint16 terminal = Task_New(Terminal_Main, 0);
+    uint16 terminal = Task_New(Terminal_Main, 0, "Shell");
     if(terminal == 0) return 1;
-    uint16 shell = Task_New(Shell_Main, terminal);
+    uint16 shell = Task_New(Shell_Main, terminal, "");
     if(shell == 0) {
         Task_Delete(terminal);
         return 2;

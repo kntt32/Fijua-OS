@@ -418,8 +418,13 @@ sintn Syscall_FreePages(uintn pages, void* pageAddr) {
 
 
 //リロケータブルELF形式実行可能ファイルを実行
-sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
+sintn Syscall_RunApp(const ascii path[], uintn pathLength, optional ascii arg[32]) {
     Task_Yield();
+
+    for(uintn i=0; i<pathLength; i++) {
+        if(path[i] == '\0') break;
+        if(i == pathLength-1) return 1;
+    }
 
     //ファイルを開く
     File_DirectoryEntry dirEntBuff;
@@ -441,7 +446,7 @@ sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
     uintn loadAddr = 0;
 
     if(!ElfLoader_CheckDyn(elfbuff)) {
-        return 1;
+        return 2;
     }
     if(ElfLoader_GetLoadArea(elfbuff, &loadAddr, &expandSize)) {
         Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
@@ -467,13 +472,13 @@ sintn Syscall_RunApp(const ascii path[], uintn pathLength) {
         return -8;
     }
 
-    uint16 terminal = Task_New(Terminal_Main, 0);
+    uint16 terminal = Task_New(Terminal_Main, 0, "Terminal");
     if(terminal == 0) {
         Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
         Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
         return -9;
     }
-    uint16 newTaskId = Task_New(entryPoint, terminal);
+    uint16 newTaskId = Task_New(entryPoint, terminal, arg);
     if(newTaskId == 0) {
         Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
         Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
@@ -519,8 +524,12 @@ sintn Syscall_Confirm(const ascii* question, uintn strlength) {
     Syscall_DrawFont(layerId, 300-52*2+17, 100-35+10, 'O', black);
     Syscall_DrawFont(layerId, 300-52*2+25, 100-35+10, 'k', black);
 
-    Syscall_DrawFont(layerId, 300-52+17, 100-35+10, 'N', black);
-    Syscall_DrawFont(layerId, 300-52+25, 100-35+10, 'o', black);
+    Syscall_DrawFont(layerId, 300-52+1, 100-35+10, 'C', black);
+    Syscall_DrawFont(layerId, 300-52+1+8, 100-35+10, 'a', black);//Cancel
+    Syscall_DrawFont(layerId, 300-52+1+8*2, 100-35+10, 'n', black);
+    Syscall_DrawFont(layerId, 300-52+1+8*3, 100-35+10, 'c', black);
+    Syscall_DrawFont(layerId, 300-52+1+8*4, 100-35+10, 'e', black);
+    Syscall_DrawFont(layerId, 300-52+1+8*5, 100-35+10, 'l', black);
 
     for(uintn i=0; i<strlength; i++) {
         if(question[i] == '\0') break;
@@ -534,7 +543,8 @@ sintn Syscall_Confirm(const ascii* question, uintn strlength) {
             case Task_Message_Quit:
                 Syscall_Exit(1);
             case Task_Message_CloseWindow:
-                Syscall_Exit(1);
+                Layer_Window_Delete(layerId);
+                return -1;
             case Task_Message_MouseLayerEvent:
                 if(!message.data.MouseLayerEvent.leftButton) break;
                 if(message.data.MouseLayerEvent.layerId != layerId) break;

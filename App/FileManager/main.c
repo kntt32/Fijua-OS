@@ -5,10 +5,11 @@
 #include "../../Kernel/file.h"
 #include <app_x64.h>
 
-sintn main() {
+sintn main(ascii arg[32]) {
     App_Syscall_StdOut("Hello, World!\n", sizeof("Hello, World!\n"));
+    App_Syscall_StdOut(arg, 32);
 
-    App_Syscall_ExitStdIo();
+    //App_Syscall_ExitStdIo();
 
     uintn layerId;
     if(App_Syscall_NewWindow(&layerId, 50, 50, 400, 300, "FileManager")) return 0;

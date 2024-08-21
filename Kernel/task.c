@@ -88,7 +88,7 @@ static sintn Task_GetIndexOfTaskList(uint16 taskId) {
 
 
 //Add NewTask and return taskID
-uint16 Task_New(sintn (*taskEntry)(void), uint16 stdio_taskId) {
+uint16 Task_New(void* taskEntry, uint16 stdio_taskId, const ascii arg[32]) {
     if(taskEntry == NULL) return 0;
 
     uint16 newTaskId = Task_SeekNewTaskID();
@@ -109,6 +109,15 @@ uint16 Task_New(sintn (*taskEntry)(void), uint16 stdio_taskId) {
     task.Table.list[task.Table.count].stackPtr = Task_NewTask_Asm_SetStartContext((void*)(((uintn)stackPtr)+Task_DefaultStackPageSize-1));
     task.Table.list[task.Table.count].taskEntry = taskEntry;
     Queue_Init(&(task.Table.list[task.Table.count].messages), sizeof(Task_Message));
+
+    if(arg == NULL) {
+        task.Table.list[task.Table.count].arg[0] = '\0';
+    }else {
+        for(uintn i=0; i<32; i++) {
+            task.Table.list[task.Table.count].arg[i] = arg[i];
+        }
+        task.Table.list[task.Table.count].arg[31] = '\0';
+    }
 
     task.Table.count++;
 
@@ -158,7 +167,7 @@ void Task_Delete(uint16 taskId) {
 void Task_New_StartPoint() {
     sintn taskIndex = Task_GetIndexOfTaskList(task.Queue.runningTaskId);
     if(taskIndex != -1) {
-        task.Table.list[taskIndex].taskEntry();
+        task.Table.list[taskIndex].taskEntry(task.Table.list[taskIndex].arg);
     }
 
     //end task

@@ -55,8 +55,10 @@ typedef struct {
     uint16 taskId;//0,1は無効、2はカーネル用に予約済み
     uint16 stdio_taskId;//StdIoに使うTaskId
     void* stackPtr;
-    sintn (*taskEntry)(void);
+    sintn (*taskEntry)(ascii arg[32]);
     Queue messages;
+
+    ascii arg[32];
 } Task_Object;
 
 
@@ -82,7 +84,7 @@ typedef struct {
 
 void Task_Init(void);
 
-uint16 Task_New(sintn (*taskEntry)(void), uint16 stdio_taskId);
+uint16 Task_New(void* taskEntry, uint16 stdio_taskId, const ascii arg[32]);
 void Task_Delete(uint16 taskId);
 uintn Task_EnQueueTask(uint16 taskId);
 

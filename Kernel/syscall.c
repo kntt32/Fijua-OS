@@ -259,10 +259,7 @@ sintn Syscall_GetFileList(const ascii path[], uintn pathLength, uintn* buffCount
 
     for(uintn i=0; i<pathLength; i++) {
         if(path[i] == '\0') {
-            if(File_GetDirectory(path, buffCount, buff)) {
-                *buffCount = 0;
-                return 1;
-            }
+            if(File_GetDirectory(path, buffCount, buff)) return 1;
             return 0;
         }
     }

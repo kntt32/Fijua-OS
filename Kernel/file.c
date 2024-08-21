@@ -110,7 +110,10 @@ static uintn File_ConvertPath(const ascii path[], uint16 pathUtf16Le[], uintn* p
 
 //ディレクトリエントリを作成
 static uintn File_DirectoryEntry_SetByDirHandle(EFI_FILE_PROTOCOL* Efi_fileProtocol, uintn* buffCount, File_DirectoryEntry buff[]) {
-    if(Efi_fileProtocol == NULL || buffCount == NULL || (*buffCount != 0 && buff == NULL)) return 1;//無効な入力
+    if(Efi_fileProtocol == NULL || buffCount == NULL || (*buffCount != 0 && buff == NULL)) {
+        *buffCount = 0;
+        return 1;//無効な入力
+    }
     uintn status;
 
     uintn directoryEntryIndex = 0;
@@ -136,7 +139,10 @@ static uintn File_DirectoryEntry_SetByDirHandle(EFI_FILE_PROTOCOL* Efi_fileProto
             Efi_fileProtocol,
             &infobuffSize,
             infobuff);
-        if(status) return 3;
+        if(status) {
+            *buffCount = 0;
+            return 3;
+        }
 
         if(!(*buffCount <= directoryEntryIndex)) {
             EFI_FILE_INFO* Efi_fileInfo = (EFI_FILE_INFO*)infobuff;
@@ -285,19 +291,26 @@ static EFI_FILE_PROTOCOL* File_GetHandleByPath(const ascii path[], uint64 openMo
 
 //ディレクトリリスト取得
 uintn File_GetDirectory(const ascii path[], uintn* buffCount, File_DirectoryEntry buff[]) {
-    if(path == NULL || buffCount == NULL || (*buffCount != 0 && buff == NULL)) return 1;//無効な入力
+    if(path == NULL || buffCount == NULL || (*buffCount != 0 && buff == NULL)) {
+        *buffCount = 0;
+        return 1;
+    }//無効な入力
 
     uintn status = 0;
 
     //ハンドル取得
     EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path, EFI_FILE_MODE_READ);
-    if(Efi_fileProtocol == NULL) return 2;
+    if(Efi_fileProtocol == NULL) {
+        *buffCount = 0;
+        return 2;
+    }
 
     //ディレクトリか判定
     if(File_IsDirectory(Efi_fileProtocol) <= 0) {
         Efi_Wrapper(
             Efi_fileProtocol->Close,
             Efi_fileProtocol);
+        *buffCount = 0;
         return 5;//ディレクトリでない
     }
 

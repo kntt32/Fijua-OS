@@ -25,7 +25,7 @@ static void Console_Scroll(void);
 
 
 void Console_Init(void) {
-    console_framebuffData.frameBuff = console_framebuff;
+    console_framebuffData.frameBuff = (uint32*)console_framebuff;
     console_framebuffData.width = buffwidth*8;
     console_framebuffData.height = buffheight*16;
     console_framebuffData.scanlineWidth = console_framebuffData.width;

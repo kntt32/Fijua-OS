@@ -25,6 +25,7 @@
 .global App_Syscall_Confirm
 .global App_Syscall_GetThisTaskId
 .global App_Syscall_GetDisplaySize
+.global App_Syscall_Alert
 
 .text
 
@@ -160,5 +161,10 @@ App_Syscall_GetThisTaskId:
 
 App_Syscall_GetDisplaySize:
     mov $26, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_Alert:
+    mov $27, %rax
     callq *(0x100000)
     ret

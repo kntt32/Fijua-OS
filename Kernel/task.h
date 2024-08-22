@@ -41,6 +41,7 @@ typedef struct {
             uintn layerId;
             sintn x;
             sintn y;
+            sintn relativeScroll;
             uintn leftButton;
         } MouseLayerEvent;
 

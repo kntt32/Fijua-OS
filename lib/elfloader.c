@@ -63,6 +63,14 @@ unsigned int ElfLoader_CheckDyn(in const void* file) {
 }
 
 
+//check elf
+unsigned int ElfLoader_CheckElf(in const void* file) {
+    const uint32* ptr = file;
+    if(*ptr == 0x464c457f) return 1;
+    return 0;
+}
+
+
 //Expand elf excutable file
 unsigned int ElfLoader_Load(in const void* file, in uintn loadAddr) {
     if(file == NULL) return 1;

@@ -441,6 +441,11 @@ sintn Syscall_RunApp(const ascii path[], uintn pathLength, optional ascii arg[32
         return -4;
     }
 
+    if(!ElfLoader_CheckElf(elfbuff)) {
+        Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
+        return 1;
+    }
+
     //ファイル展開
     uintn expandSize = 0;
     uintn loadAddr = 0;
@@ -583,5 +588,51 @@ sintn Syscall_GetDisplaySize(optional out uintn* width, optional out uintn* heig
     if(width != NULL) *width = KernelInput->Graphic.width;
     if(height != NULL) *height = KernelInput->Graphic.height;
     return 0;
+}
+
+
+//通知
+sintn Syscall_Alert(const ascii* str, uintn strlength) {
+    if(str == NULL) return -1;
+
+    uint16 runningTaskId = Task_GetRunningTaskId();
+    uintn layerId = Layer_Window_New(runningTaskId, "Alert", 10, 42, 300, 100);
+    if(layerId == 0) return -1;
+
+    Graphic_Color gray = {0xb0, 0xb0, 0xb0};
+    Graphic_Color black = {0x00, 0x00, 0x00};
+
+    Syscall_DrawSquare(layerId, 300-52, 100-35, 50, 32, gray);
+
+    Syscall_DrawFont(layerId, 300-52+17, 100-35+10, 'O', black);
+    Syscall_DrawFont(layerId, 300-52+25, 100-35+10, 'k', black);
+
+    for(uintn i=0; i<strlength; i++) {
+        if(str[i] == '\0') break;
+        Syscall_DrawFont(layerId, 10+i*8, 10, str[i], black);
+    }
+
+    Task_Message message;
+    while(1) {
+        Syscall_ReadMessage(&message);
+        switch(message.type) {
+            case Task_Message_Quit:
+                Syscall_Exit(1);
+            case Task_Message_CloseWindow:
+                Layer_Window_Delete(layerId);
+                return -1;
+            case Task_Message_MouseLayerEvent:
+                if(!message.data.MouseLayerEvent.leftButton) break;
+                if(message.data.MouseLayerEvent.layerId != layerId) break;
+                //Ok
+                if(300-52 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-52+50
+                    && 100-35 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 100-35+32) {
+                    Layer_Window_Delete(layerId);
+                    return 0;
+                }
+            default:
+                break;
+        }
+    }
 }
 

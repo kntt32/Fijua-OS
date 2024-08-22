@@ -68,4 +68,6 @@ sintn App_Syscall_GetThisTaskId(out uint16* taskId);
 
 sintn App_Syscall_GetDisplaySize(optional out uintn* width, optional out uintn* height);
 
+sintn App_Syscall_Alert(const ascii* str, uintn strlength);
+
 #endif

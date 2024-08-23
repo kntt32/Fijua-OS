@@ -4,6 +4,8 @@
 #include "../../Kernel/task.h"
 #include "../../Kernel/file.h"
 #include <app_x64.h>
+#include <efi.h>
+#include <efi_simple_text_input_protocol.h>
 
 #define DefaultBuffSize (128)
 
@@ -22,6 +24,7 @@ struct {
 sintn selectedIndex = -1;
 
 void respondMouse(Task_Message* message);
+void respondKeyboard(Task_Message* message);
 void load(void);
 void flush(void);
 
@@ -45,6 +48,9 @@ sintn main(ascii arg[32]) {
                 break;
             case Task_Message_CloseWindow:
                 App_Syscall_Exit(0);
+                break;
+            case Task_Message_KeyPushed:
+                respondKeyboard(&message);
                 break;
             case Task_Message_MouseLayerEvent:
                 respondMouse(&message);
@@ -171,6 +177,52 @@ static uintn getAbsPath(const ascii relPath[DefaultBuffSize], const ascii workin
 }
 
 
+void respondKeyboard(Task_Message* message) {
+    if(message->type != Task_Message_KeyPushed) return;
+
+    if(message->data.KeyPushed.asciiCode != 0) {
+        if(message->data.KeyPushed.asciiCode == '\n') {
+            if(selectedIndex != -1) {
+                if(dirEntData.dirEntList[selectedIndex].type == File_Directory) {
+                    ascii absPath[DefaultBuffSize];
+                    if(getAbsPath(
+                        dirEntData.dirEntList[selectedIndex].name,
+                        path,
+                        absPath)) {
+                        return;
+                    }
+                    for(uintn k=0; k<DefaultBuffSize; k++) {
+                        path[k] = absPath[k];
+                        if(path[k] == '\0') break;
+                    }
+                    load();
+                }
+            }
+        }
+    }else {
+        switch(message->data.KeyPushed.scanCode) {
+            case EFI_SIMPLE_INPUT_SCANCODE_UPARROW:
+                if(0 < selectedIndex) selectedIndex --;
+                scroll -= 32;
+                if(scroll < 0) scroll = 0;
+                break;
+            case EFI_SIMPLE_INPUT_SCANCODE_DOWNARROW:
+                if(selectedIndex == -1) {
+                    selectedIndex = 0;
+                    break;
+                }
+                if(selectedIndex+1 < (sintn)dirEntData.entryCount) selectedIndex ++;
+                if(scroll < (sintn)(32*dirEntData.entryCount)-(sintn)(height-64)+32) scroll += 32;
+                break;
+            default:
+                break;
+        }
+    }
+
+    flush();
+
+    return;
+}
 
 
 void respondMouse(Task_Message* message) {
@@ -289,8 +341,47 @@ void flush(void) {
 
     Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
-    App_Syscall_DrawSquare(layerId, 0, 0, width, 64, gray);
     App_Syscall_DrawSquare(layerId, 0, 64, width, height-64, white);
+
+    if(dirEntData.isExist) {
+        for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
+            if(i == selectedIndex) {
+                App_Syscall_DrawSquare(layerId, 0, 64+16+i*32-scroll, width, 32, blue);
+            }
+
+            for(uintn k=0; k<32; k++) {
+                if(dirEntData.dirEntList[i].name[k] == '\0') break;
+                App_Syscall_DrawFont(layerId, 4+k*8, 64+16+10+i*32-scroll, dirEntData.dirEntList[i].name[k], black);
+            }
+
+            if(dirEntData.dirEntList[i].type != File_Directory) {
+                if(dirEntData.dirEntList[i].size == 0) {
+                    App_Syscall_DrawFont(layerId, width-32-8, 64+16+10+i*32-scroll, '0', black);
+                }else {
+                    uintn log10uintn_size = log10uintn(dirEntData.dirEntList[i].size);
+                    ascii strbuff[log10uintn_size+2];
+                    sprintint(dirEntData.dirEntList[i].size, log10uintn_size+2, strbuff);
+                    for(uintn k=0; k<log10uintn_size+1; k++) {
+                        App_Syscall_DrawFont(layerId, width-32-8*(log10uintn_size-k), 64+16+10+i*32-scroll, strbuff[k], black);
+                    }
+                }
+            }
+
+            if(dirEntData.dirEntList[i].type == File_Directory) {
+                App_Syscall_DrawFont(layerId, width-12, 64+16+10+i*32-scroll, '>', black);
+            }
+
+            if(0 <= 64+16+32+i*32-scroll-1) App_Syscall_DrawSquare(layerId, 0, 64+16+32+i*32-scroll-1, width, 1, gray);
+        }
+    }else {
+        ascii str[] = "Path Not Found.";
+        for(uintn i=0; i<sizeof(str); i++) {
+            if(str[i] == '\0') break;
+            App_Syscall_DrawFont(layerId, i*8, 64+16, str[i], black);
+        }
+    }
+
+    App_Syscall_DrawSquare(layerId, 0, 0, width, 64, gray);
 
     //パスバー
     App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, white);
@@ -386,48 +477,11 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, width-24+8, 64, 'i', gray);
     App_Syscall_DrawFont(layerId, width-24+8*2, 64, 'r', gray);
 
-    if(dirEntData.isExist) {
-        for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
-            if(i == selectedIndex) {
-                App_Syscall_DrawSquare(layerId, 0, 64+16+i*32-scroll, width, 32, blue);
-            }
-
-            for(uintn k=0; k<32; k++) {
-                if(dirEntData.dirEntList[i].name[k] == '\0') break;
-                App_Syscall_DrawFont(layerId, 4+k*8, 64+16+10+i*32-scroll, dirEntData.dirEntList[i].name[k], black);
-            }
-
-            if(dirEntData.dirEntList[i].type != File_Directory) {
-                if(dirEntData.dirEntList[i].size == 0) {
-                    App_Syscall_DrawFont(layerId, width-32-8, 64+16+10+i*32-scroll, '0', black);
-                }else {
-                    uintn log10uintn_size = log10uintn(dirEntData.dirEntList[i].size);
-                    ascii strbuff[log10uintn_size+2];
-                    sprintint(dirEntData.dirEntList[i].size, log10uintn_size+2, strbuff);
-                    for(uintn k=0; k<log10uintn_size+1; k++) {
-                        App_Syscall_DrawFont(layerId, width-32-8*(log10uintn_size-k), 64+16+10+i*32-scroll, strbuff[k], black);
-                    }
-                }
-            }
-
-            if(dirEntData.dirEntList[i].type == File_Directory) {
-                App_Syscall_DrawFont(layerId, width-12, 64+16+10+i*32-scroll, '>', black);
-            }
+    
 
 
-            App_Syscall_DrawSquare(layerId, 0, 64+16+32+i*32-scroll-1, width, 1, gray);
-        }
-    }else {
-        ascii str[] = "Path Not Found.";
-        for(uintn i=0; i<sizeof(str); i++) {
-            if(str[i] == '\0') break;
-            App_Syscall_DrawFont(layerId, i*8, 64+16, str[i], black);
-        }
-    }
-
-/*
     //スクロールを表示
-    if(height-64 <= )
-*/
+
+
     return;
 }

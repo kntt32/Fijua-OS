@@ -2,6 +2,7 @@
 #include <kernel.h>
 #include <efi.h>
 #include <efi_runtime_services.h>
+#include <efi_simple_text_input_protocol.h>
 #include "syscall.h"
 #include "queue.h"
 #include "task.h"
@@ -634,5 +635,86 @@ sintn Syscall_Alert(const ascii* str, uintn strlength) {
                 break;
         }
     }
+}
+
+
+//エディタ
+sintn Syscall_EditBox(uintn layerId, uintn x, uintn y, uintn height, out ascii buff[], uintn buffSize) {
+    if(buff == NULL) return 1;
+
+    sintn cursorX = 0;
+
+    uintn width = buffSize*8;
+    for(uintn i=0; i<buffSize; i++) {
+        if(buff[i] == '\0') {
+            cursorX = i;
+            break;
+        }
+        if(i == buffSize-1) buff[0] = '\0';
+    }
+
+    Graphic_Color black = {0x00, 0x00, 0x00};
+    Graphic_Color backcolor = {0xff, 0xff, 0xff};
+
+    Task_Message message;
+    while(1) {
+        Syscall_DrawSquare(layerId, x, y, width, height, backcolor);
+        for(uintn i=0; i<buffSize; i++) {
+            if(buff[i] == '\0') break;
+            Syscall_DrawFont(layerId, x+8*i, y+height/2-6, buff[i], black);
+        }
+        Syscall_DrawSquare(layerId, x+8*cursorX, y+height/2+8, 8, 2, black);
+
+        Syscall_ReadMessage(&message);
+        switch(message.type) {
+            case Task_Message_Quit:
+                return -1;
+            case Task_Message_CloseWindow:
+                return -2;
+            case Task_Message_MouseLayerEvent:
+                if(message.data.MouseLayerEvent.leftButton) {
+                    if(message.data.MouseLayerEvent.layerId != layerId) return 0;
+                    if(!((sintn)x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(x+width)
+                        && (sintn)y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(y+height))) {
+                        return 0;
+                    }
+                }
+                break;
+            case Task_Message_KeyPushed:
+                if(message.data.KeyPushed.asciiCode != 0) {
+                    if(message.data.KeyPushed.asciiCode == '\n') return 0;
+                    if(message.data.KeyPushed.asciiCode == 0x08) {
+                        if(cursorX == 0) break;
+                        cursorX --;
+                        for(uintn i=cursorX; i<buffSize-1; i++) {
+                            buff[i] = buff[i+1];
+                        }
+                        break;
+                    }
+                    if(cursorX == (sintn)buffSize) break;
+                    for(sintn i=buffSize-2; cursorX<=i; i--) {
+                        buff[i+1] = buff[i];
+                    }
+                    buff[cursorX] = message.data.KeyPushed.asciiCode;
+                    cursorX++;
+                }else {
+                    switch(message.data.KeyPushed.scanCode) {
+                        case EFI_SIMPLE_INPUT_SCANCODE_RIGHTARROW:
+                            if(buff[cursorX] != '\0') cursorX++;
+                            break;
+                        case EFI_SIMPLE_INPUT_SCANCODE_LEFTARROW:
+                            if(cursorX != 0) cursorX--;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            default:
+                break;
+        }
+    }
+
+
+    return 0;
 }
 

@@ -231,6 +231,9 @@ Syscall_AppEnter:#16バイトアライメントの必要なし
     cmp $27, %rax
     je Syscall_AppEnter_Syscall_Alert
 
+    cmp $28, %rax
+    je Syscall_AppEnter_Syscall_EditBox
+
     #無効なシステムコール番号
     mov $-1, %rax
     jmp Syscall_AppEnter_Exit
@@ -345,6 +348,10 @@ Syscall_AppEnter_Syscall_GetDisplaySize:
 
 Syscall_AppEnter_Syscall_Alert:
     call Syscall_Alert
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_EditBox:
+    call Syscall_EditBox
     jmp Syscall_AppEnter_Exit
 
 Syscall_AppEnter_Exit:

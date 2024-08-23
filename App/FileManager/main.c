@@ -14,10 +14,11 @@ ascii path[DefaultBuffSize] = "";
 
 sintn scroll = 0;
 struct {
+    uintn isExist;
     uintn pages;
     uintn entryCount;
     File_DirectoryEntry* dirEntList;
-} dirEntData = {0, 0, NULL};
+} dirEntData = {0, 0, 0, NULL};
 sintn selectedIndex = -1;
 
 void respondMouse(Task_Message* message);
@@ -29,7 +30,6 @@ void flush(void);
 sintn main(ascii arg[32]) {
     App_Syscall_StdOut("ABCDE", 6);
     //App_Syscall_ExitStdIo();
-
 
     if(App_Syscall_NewWindow(&layerId, 50, 50, width, height, "FileManager")) return 0;
 
@@ -175,12 +175,6 @@ static uintn getAbsPath(const ascii relPath[DefaultBuffSize], const ascii workin
 
 void respondMouse(Task_Message* message) {
     if(message->type != Task_Message_MouseLayerEvent) return;
-    if(message->data.MouseLayerEvent.relativeScroll != 0) {
-        if(64 <= message->data.MouseLayerEvent.y) {
-            scroll += message->data.MouseLayerEvent.relativeScroll;
-            flush();
-        }
-    }
 
     if(message->data.MouseLayerEvent.leftButton) {
         //戻るボタン
@@ -226,6 +220,17 @@ void respondMouse(Task_Message* message) {
             }
         }
 
+        //パスバーApp_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, ui_color);
+        if(32 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)(width-32)
+            && 32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 64) {
+            App_Syscall_EditBox(layerId, 32+48, 32+1, 32-2, path, DefaultBuffSize);
+            load();
+            flush();
+        }
+
+        //ファイル移動
+
+
         //ファイルリストに対しての操作
         if(64 <= message->data.MouseLayerEvent.y) {
             for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
@@ -258,6 +263,7 @@ void respondMouse(Task_Message* message) {
 
 void load(void) {
     App_Syscall_FreePages(dirEntData.pages, dirEntData.dirEntList);
+    dirEntData.isExist = 0;
     dirEntData.dirEntList = NULL;
     dirEntData.entryCount = 0;
     dirEntData.pages = 0;
@@ -265,7 +271,9 @@ void load(void) {
     dirEntData.pages = (dirEntData.entryCount + 0xfff) >> 12;
     if(App_Syscall_AllocPage(dirEntData.pages, (void**)&dirEntData.dirEntList)) return;
 
-    App_Syscall_GetFileList(path, DefaultBuffSize, &dirEntData.entryCount, dirEntData.dirEntList);
+    if(!App_Syscall_GetFileList(path, DefaultBuffSize, &dirEntData.entryCount, dirEntData.dirEntList)) {
+        dirEntData.isExist = 1;
+    }
 
     selectedIndex = -1;
 
@@ -285,7 +293,7 @@ void flush(void) {
     App_Syscall_DrawSquare(layerId, 0, 64, width, height-64, white);
 
     //パスバー
-    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, ui_color);
+    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, white);
     App_Syscall_DrawFont(layerId, 32+8, 32+10, 'p', black);
     App_Syscall_DrawFont(layerId, 32+8+8, 32+10, 'a', black);
     App_Syscall_DrawFont(layerId, 32+8+8*2, 32+10, 't', black);
@@ -378,33 +386,43 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, width-24+8, 64, 'i', gray);
     App_Syscall_DrawFont(layerId, width-24+8*2, 64, 'r', gray);
 
-    for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
-        if(i == selectedIndex) {
-            App_Syscall_DrawSquare(layerId, 0, 64+16+i*32-scroll, width, 32, blue);
-        }
-
-        for(uintn k=0; k<32; k++) {
-            if(dirEntData.dirEntList[i].name[k] == '\0') break;
-            App_Syscall_DrawFont(layerId, 4+k*8, 64+16+10+i*32-scroll, dirEntData.dirEntList[i].name[k], black);
-        }
-
-        if(dirEntData.dirEntList[i].size == 0) {
-            App_Syscall_DrawFont(layerId, width-32-8, 64+16+10+i*32-scroll, '0', black);
-        }else {
-            uintn log10uintn_size = log10uintn(dirEntData.dirEntList[i].size);
-            ascii strbuff[log10uintn_size+2];
-            sprintint(dirEntData.dirEntList[i].size, log10uintn_size+2, strbuff);
-            for(uintn k=0; k<log10uintn_size+1; k++) {
-                App_Syscall_DrawFont(layerId, width-32-8*(log10uintn_size-k), 64+16+10+i*32-scroll, strbuff[k], black);
+    if(dirEntData.isExist) {
+        for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
+            if(i == selectedIndex) {
+                App_Syscall_DrawSquare(layerId, 0, 64+16+i*32-scroll, width, 32, blue);
             }
+
+            for(uintn k=0; k<32; k++) {
+                if(dirEntData.dirEntList[i].name[k] == '\0') break;
+                App_Syscall_DrawFont(layerId, 4+k*8, 64+16+10+i*32-scroll, dirEntData.dirEntList[i].name[k], black);
+            }
+
+            if(dirEntData.dirEntList[i].type != File_Directory) {
+                if(dirEntData.dirEntList[i].size == 0) {
+                    App_Syscall_DrawFont(layerId, width-32-8, 64+16+10+i*32-scroll, '0', black);
+                }else {
+                    uintn log10uintn_size = log10uintn(dirEntData.dirEntList[i].size);
+                    ascii strbuff[log10uintn_size+2];
+                    sprintint(dirEntData.dirEntList[i].size, log10uintn_size+2, strbuff);
+                    for(uintn k=0; k<log10uintn_size+1; k++) {
+                        App_Syscall_DrawFont(layerId, width-32-8*(log10uintn_size-k), 64+16+10+i*32-scroll, strbuff[k], black);
+                    }
+                }
+            }
+
+            if(dirEntData.dirEntList[i].type == File_Directory) {
+                App_Syscall_DrawFont(layerId, width-12, 64+16+10+i*32-scroll, '>', black);
+            }
+
+
+            App_Syscall_DrawSquare(layerId, 0, 64+16+32+i*32-scroll-1, width, 1, gray);
         }
-
-        if(dirEntData.dirEntList[i].type == File_Directory) {
-            App_Syscall_DrawFont(layerId, width-12, 64+16+10+i*32-scroll, '>', black);
+    }else {
+        ascii str[] = "Path Not Found.";
+        for(uintn i=0; i<sizeof(str); i++) {
+            if(str[i] == '\0') break;
+            App_Syscall_DrawFont(layerId, i*8, 64+16, str[i], black);
         }
-
-
-        App_Syscall_DrawSquare(layerId, 0, 64+16+32+i*32-scroll-1, width, 1, gray);
     }
 
 /*

@@ -26,6 +26,7 @@
 .global App_Syscall_GetThisTaskId
 .global App_Syscall_GetDisplaySize
 .global App_Syscall_Alert
+.global App_Syscall_EditBox
 
 .text
 
@@ -166,5 +167,10 @@ App_Syscall_GetDisplaySize:
 
 App_Syscall_Alert:
     mov $27, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_EditBox:
+    mov $28, %rax
     callq *(0x100000)
     ret

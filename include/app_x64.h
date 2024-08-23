@@ -70,4 +70,6 @@ sintn App_Syscall_GetDisplaySize(optional out uintn* width, optional out uintn* 
 
 sintn App_Syscall_Alert(const ascii* str, uintn strlength);
 
+sintn App_Syscall_EditBox(uintn layerId, uintn x, uintn y, uintn height, out ascii buff[], uintn buffSize);
+
 #endif

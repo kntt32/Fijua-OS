@@ -457,7 +457,7 @@ void Shell_Cmd_Touch(const ascii cmdInput[Shell_DefaultBuffSize], ascii workingP
         return;
     }
 
-    ascii buff[] = "Hello, World!\nCreated by Touch command";
+    ascii buff[] = "Hello, World!";
     status = App_Syscall_WriteFileFromMem(absPath, Shell_DefaultBuffSize, sizeof(buff), buff);
     if(status) {
         App_Syscall_StdOut("touch: Couldn't Create File\n", sizeof("touch: Couldn't Create File\n"));

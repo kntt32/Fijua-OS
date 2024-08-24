@@ -72,4 +72,6 @@ sintn App_Syscall_Alert(const ascii* str, uintn strlength);
 
 sintn App_Syscall_EditBox(uintn layerId, uintn x, uintn y, uintn height, out ascii buff[], uintn buffSize);
 
+sintn App_Syscall_Prompt(const ascii question[], uintn questionLength, out ascii buff[], uintn buffLength);
+
 #endif

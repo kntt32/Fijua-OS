@@ -547,10 +547,17 @@ sintn Syscall_Confirm(const ascii* question, uintn strlength) {
         Syscall_ReadMessage(&message);
         switch(message.type) {
             case Task_Message_Quit:
-                Syscall_Exit(1);
+                Layer_Window_Delete(layerId);
+                Message_EnQueue(Task_GetRunningTaskId(), &message);
+                return -1;
             case Task_Message_CloseWindow:
                 Layer_Window_Delete(layerId);
                 return -1;
+            case Task_Message_KeyPushed:
+                if(message.data.KeyPushed.asciiCode == '\n') {
+                    Layer_Window_Delete(layerId);
+                    return 0;
+                }
             case Task_Message_MouseLayerEvent:
                 if(!message.data.MouseLayerEvent.leftButton) break;
                 if(message.data.MouseLayerEvent.layerId != layerId) break;
@@ -618,10 +625,12 @@ sintn Syscall_Alert(const ascii* str, uintn strlength) {
         Syscall_ReadMessage(&message);
         switch(message.type) {
             case Task_Message_Quit:
-                Syscall_Exit(1);
+                Layer_Window_Delete(layerId);
+                Message_EnQueue(Task_GetRunningTaskId(), &message);
+                return -1;
             case Task_Message_CloseWindow:
                 Layer_Window_Delete(layerId);
-                return -1;
+                return -2;
             case Task_Message_MouseLayerEvent:
                 if(!message.data.MouseLayerEvent.leftButton) break;
                 if(message.data.MouseLayerEvent.layerId != layerId) break;
@@ -668,21 +677,36 @@ sintn Syscall_EditBox(uintn layerId, uintn x, uintn y, uintn height, out ascii b
         Syscall_ReadMessage(&message);
         switch(message.type) {
             case Task_Message_Quit:
+                Message_EnQueue(Task_GetRunningTaskId(), &message);
                 return -1;
             case Task_Message_CloseWindow:
+                Message_EnQueue(Task_GetRunningTaskId(), &message);
                 return -2;
             case Task_Message_MouseLayerEvent:
                 if(message.data.MouseLayerEvent.leftButton) {
                     if(message.data.MouseLayerEvent.layerId != layerId) return 0;
                     if(!((sintn)x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(x+width)
                         && (sintn)y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(y+height))) {
+                        Message_EnQueue(Task_GetRunningTaskId(), &message);
                         return 0;
+                    }else {
+                        sintn cursorX_tmp = (message.data.MouseLayerEvent.x-x)/8;
+                        for(sintn i=0; i<cursorX_tmp-1; i++) {
+                            if(buff[i] == '\0') {
+                                cursorX_tmp = i;
+                                break;
+                            }
+                        }
+                        cursorX = cursorX_tmp;
                     }
                 }
                 break;
             case Task_Message_KeyPushed:
                 if(message.data.KeyPushed.asciiCode != 0) {
-                    if(message.data.KeyPushed.asciiCode == '\n') return 0;
+                    if(message.data.KeyPushed.asciiCode == '\n') {
+                        Message_EnQueue(Task_GetRunningTaskId(), &message);
+                        return 0;
+                    }
                     if(message.data.KeyPushed.asciiCode == 0x08) {
                         if(cursorX == 0) break;
                         cursorX --;
@@ -714,6 +738,71 @@ sintn Syscall_EditBox(uintn layerId, uintn x, uintn y, uintn height, out ascii b
         }
     }
 
+
+    return 0;
+}
+
+
+//プロンプト
+sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn buffLength) {
+    if(str == NULL || buff == NULL) return 1;
+
+    uint16 runningTaskId = Task_GetRunningTaskId();
+    uintn layerId = Layer_Window_New(runningTaskId, "Prompt", 10, 42, 300, 150);
+    if(layerId == 0) return -1;
+
+    Graphic_Color gray = {0xb0, 0xb0, 0xb0};
+    Graphic_Color black = {0x00, 0x00, 0x00};
+    Graphic_Color editor_backcolor = {0xff, 0xff, 0xff};
+    Graphic_Color uicolor = {0xf0, 0xf0, 0xf0};
+    Syscall_DrawSquare(layerId, 300-51, 150-33, 50, 32, gray);
+    Syscall_DrawFont(layerId, 300-51+25-8, 150-33+10, 'O', black);
+    Syscall_DrawFont(layerId, 300-51+25, 150-33+10, 'k', black);
+    
+    for(uintn i=0; i<strLength; i++) {
+        if(str[i] == '\0') break;
+        Syscall_DrawFont(layerId, 10+i*8, 10, str[i], black);
+    }
+
+    Syscall_DrawSquare(layerId, 9, 150-52-32-1, buffLength*8+2, 32+2, uicolor);
+    Syscall_DrawSquare(layerId, 10, 150-52-32, buffLength*8, 32, editor_backcolor);
+
+    Syscall_EditBox(layerId, 10, 150-52-32, 32, buff, buffLength);
+
+    Task_Message message;
+    while(1) {
+        Syscall_ReadMessage(&message);
+
+        switch(message.type) {
+            case Task_Message_Quit:
+                Layer_Window_Delete(layerId);
+                Message_EnQueue(Task_GetRunningTaskId(), &message);
+                return -1;
+            case Task_Message_CloseWindow:
+                Layer_Window_Delete(layerId);
+                return -2;
+            case Task_Message_MouseLayerEvent:
+                if(message.data.MouseLayerEvent.layerId != layerId) break;
+                if(10 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(100+buffLength*8)
+                    && 150-52-32 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 150-52) {
+                    Syscall_EditBox(layerId, 10, 150-52-32, 32, buff, buffLength);
+                }
+                if(300-51 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-1
+                    && 150-33 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 150-1) {
+                    Layer_Window_Delete(layerId);
+                    return 0;
+                }
+                break;
+            case Task_Message_KeyPushed:
+                if(message.data.KeyPushed.asciiCode == '\n') {
+                    Layer_Window_Delete(layerId);
+                    return 0;
+                }
+                break;
+            default:
+                break;
+        }
+    }
 
     return 0;
 }

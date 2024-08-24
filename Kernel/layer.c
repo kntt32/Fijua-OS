@@ -750,14 +750,10 @@ void Layer_Window_NotifyUpdate(uintn layerId, uintn x, uintn y, uintn width, uin
         targetWindow->Change.width = width;
         targetWindow->Change.height = height;
     }else {
-        const uintn startX = (targetWindow->Change.x < x)?(targetWindow->Change.x):(x);
-        const uintn endX = (targetWindow->Change.x+targetWindow->Change.width < x+width)?(x+width):(targetWindow->Change.x+targetWindow->Change.width);
-        const uintn startY = (targetWindow->Change.y < y)?(targetWindow->Change.y):(y);
-        const uintn endY = (targetWindow->Change.y+targetWindow->Change.height < y+height)?(y+height):(targetWindow->Change.y+targetWindow->Change.height);
-        targetWindow->Change.x = startX;
-        targetWindow->Change.y = startY;
-        targetWindow->Change.width = endX - startX;
-        targetWindow->Change.height = endY - startY;
+        targetWindow->Change.x = 0;
+        targetWindow->Change.y = 0;
+        targetWindow->Change.width = targetWindow->Draw.width;
+        targetWindow->Change.height = targetWindow->Draw.height;
     }
     
     layer.changedFlag = 1;

@@ -27,12 +27,13 @@ void respondMouse(Task_Message* message);
 void respondKeyboard(Task_Message* message);
 void load(void);
 void flush(void);
-
+uintn mv(const ascii fromRelPath[DefaultBuffSize], const ascii toRelPath[DefaultBuffSize], ascii workingPath[DefaultBuffSize]);
+uintn cp(const ascii fromRelPath[DefaultBuffSize], const ascii toRelPath[DefaultBuffSize], ascii workingPath[DefaultBuffSize]);
 
 
 sintn main(ascii arg[32]) {
-    App_Syscall_StdOut("ABCDE", 6);
-    //App_Syscall_ExitStdIo();
+    App_Syscall_ExitStdIo();
+    //App_Syscall_StdOut("Hello", sizeof("Hello"));
 
     if(App_Syscall_NewWindow(&layerId, 50, 50, width, height, "FileManager")) return 0;
 
@@ -181,6 +182,20 @@ void respondKeyboard(Task_Message* message) {
     if(message->type != Task_Message_KeyPushed) return;
 
     if(message->data.KeyPushed.asciiCode != 0) {
+        if(message->data.KeyPushed.asciiCode == 0x08) {
+            ascii absPath[DefaultBuffSize];
+            if(getAbsPath(
+                "..",
+                path,
+                absPath)) {
+                return;
+            }
+            for(uintn k=0; k<DefaultBuffSize; k++) {
+                path[k] = absPath[k];
+                if(path[k] == '\0') break;
+            }
+            load();
+        }
         if(message->data.KeyPushed.asciiCode == '\n') {
             if(selectedIndex != -1) {
                 if(dirEntData.dirEntList[selectedIndex].type == File_Directory) {
@@ -203,8 +218,11 @@ void respondKeyboard(Task_Message* message) {
         switch(message->data.KeyPushed.scanCode) {
             case EFI_SIMPLE_INPUT_SCANCODE_UPARROW:
                 if(0 < selectedIndex) selectedIndex --;
-                scroll -= 32;
-                if(scroll < 0) scroll = 0;
+                if(selectedIndex < ((sintn)(height)-64-16-32)/32) {
+                    scroll = 0;
+                }else {
+                    scroll = (selectedIndex)*32 - (((sintn)(height)-64-16-32)/32)*32;
+                }
                 break;
             case EFI_SIMPLE_INPUT_SCANCODE_DOWNARROW:
                 if(selectedIndex == -1) {
@@ -212,7 +230,11 @@ void respondKeyboard(Task_Message* message) {
                     break;
                 }
                 if(selectedIndex+1 < (sintn)dirEntData.entryCount) selectedIndex ++;
-                if(scroll < (sintn)(32*dirEntData.entryCount)-(sintn)(height-64)+32) scroll += 32;
+                if(selectedIndex < ((sintn)(height)-64-16-32)/32) {
+                    scroll = 0;
+                }else {
+                    scroll = (selectedIndex)*32 - (((sintn)(height)-64-16-32)/32)*32;
+                }
                 break;
             default:
                 break;
@@ -254,6 +276,20 @@ void respondMouse(Task_Message* message) {
             flush();
         }
 
+        //メモ帳で開く
+        if((sintn)width-32*2+1 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width-32*2+1+32
+            && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y <= 32) {
+            if(selectedIndex != -1) {
+                ascii absPath[DefaultBuffSize];
+                if(getAbsPath(dirEntData.dirEntList[selectedIndex].name, path, absPath)) {
+                    App_Syscall_Alert("Error", sizeof("Error"));
+                }
+                if(App_Syscall_RunApp("app/notepad.elf", DefaultBuffSize, absPath)) {
+                    App_Syscall_Alert("Execution Failed", sizeof("Execution Failed"));
+                }
+            }
+        }
+
         //実行ボタンApp_Syscall_DrawSquare(layerId, width-32+1, 1, 32-2, 32-2, ui_color);
         if((sintn)(width-32) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
@@ -280,8 +316,101 @@ void respondMouse(Task_Message* message) {
             flush();
         }
 
-        //ファイル移動
+        //移動ボタン
+        if(0 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32
+            && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            if(selectedIndex != -1) {
+                ascii buff[DefaultBuffSize] = "";
+                if(!App_Syscall_Prompt("Input Destination Path", sizeof("Input Destination Path"), buff, DefaultBuffSize)) {
+                    if(mv(dirEntData.dirEntList[selectedIndex].name, buff, path)) {
+                        App_Syscall_Alert("Move Failed", sizeof("Move Failed"));
+                    }
+                    load();
+                    flush();
+                }
+            }
+        }
 
+        //コピーボタン
+        if(32 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 64
+            && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            if(selectedIndex != -1) {
+                ascii buff[DefaultBuffSize] = "";
+                if(!App_Syscall_Prompt("Input Destination Path", sizeof("Input Destination Path"), buff, DefaultBuffSize)) {
+                    if(cp(dirEntData.dirEntList[selectedIndex].name, buff, path)) {
+                        App_Syscall_Alert("Copy Failed", sizeof("Copy Failed"));
+                    }
+                    load();
+                    flush();
+                }
+            }
+        }
+
+        //削除ボタン
+        if(64 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 96
+            && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            if(selectedIndex != -1) {
+                if(!App_Syscall_Confirm("Will you delete file?", sizeof("Will you delete file?"))) {
+                    ascii buff[DefaultBuffSize];
+                    getAbsPath(dirEntData.dirEntList[selectedIndex].name, path, buff);
+                    if(App_Syscall_RemoveFile(buff, DefaultBuffSize)) {
+                        App_Syscall_Alert("Delete Failed", sizeof("Delete Failed"));
+                    }
+                    load();
+                    flush();
+                }
+            }
+        }
+
+
+        //ディレクトリ作成
+        if(96 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 128
+            && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            ascii buff[DefaultBuffSize] = "";
+            if(!App_Syscall_Prompt("Input Directory Name", sizeof("Input Directory Name"), buff, DefaultBuffSize)) {
+                ascii dirAbsPath[DefaultBuffSize];
+                getAbsPath(buff, path, dirAbsPath);
+                if(App_Syscall_MkDir(dirAbsPath, DefaultBuffSize)) {
+                    App_Syscall_Alert("MkDir Failed", sizeof("MkDir Failed"));
+                }
+                load();
+                flush();
+            }
+        }
+
+
+        //テキスト作成
+        if(128 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 160
+            && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            ascii buff[DefaultBuffSize] = "";
+            if(!App_Syscall_Prompt("Input File Name", sizeof("Input File Name"), buff, DefaultBuffSize)) {
+                ascii txtAbsPath[DefaultBuffSize];
+                getAbsPath(buff, path, txtAbsPath);
+                ascii txtFile[] = "Hello, World!";
+                if(App_Syscall_WriteFileFromMem(txtAbsPath, DefaultBuffSize, sizeof(txtFile), txtFile)) {
+                    App_Syscall_Alert("MkTxt Failed", sizeof("MkTxt Failed"));
+                }
+                load();
+                flush();
+            }
+        }
+
+
+        //upボタン
+        if(32*5+16 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32*5+16+32
+            && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 16) {
+            if(32 <= scroll) scroll -= 32;
+            else scroll = 0;
+            flush();
+        }
+
+        //downボタン
+        if(32*5+16 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32*5+16+32
+            && 16 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            if(scroll < ((sintn)dirEntData.entryCount)*32 - (((sintn)(height)-64-16-32)/32)*32) scroll += 32;
+            else scroll = (dirEntData.entryCount)*32 - (((sintn)(height)-64-16-32)/32)*32;
+            flush();
+        }
 
         //ファイルリストに対しての操作
         if(64 <= message->data.MouseLayerEvent.y) {
@@ -328,6 +457,7 @@ void load(void) {
     }
 
     selectedIndex = -1;
+    scroll = 0;
 
     return;
 }
@@ -414,6 +544,52 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, width-32+8*2, 32+18, 'a', black);
     App_Syscall_DrawFont(layerId, width-32+8*3, 32+18, 'd', black);
 
+    //移動ボタン
+    App_Syscall_DrawSquare(layerId, 1, 1, 32-2, 32-2, ui_color);
+    App_Syscall_DrawFont(layerId, 4, 10, 'M', black);
+    App_Syscall_DrawFont(layerId, 4+8, 10, 'o', black);
+    App_Syscall_DrawFont(layerId, 4+8*2, 10, 'v', black);
+
+    //コピーボタン
+    App_Syscall_DrawSquare(layerId, 32+1, 1, 32-2, 32-2, ui_color);
+    App_Syscall_DrawFont(layerId, 32+4, 10, 'C', black);
+    App_Syscall_DrawFont(layerId, 32+4+8, 10, 'p', black);
+    App_Syscall_DrawFont(layerId, 32+4+8*2, 10, 'y', black);
+
+    //削除ボタン
+    App_Syscall_DrawSquare(layerId, 32*2+1, 1, 32-2, 32-2, ui_color);
+    App_Syscall_DrawFont(layerId, 32*2+4, 10, 'D', black);
+    App_Syscall_DrawFont(layerId, 32*2+4+8, 10, 'e', black);
+    App_Syscall_DrawFont(layerId, 32*2+4+8*2, 10, 'l', black);
+
+    //ディレクトリ作成
+    App_Syscall_DrawSquare(layerId, 32*3+1, 1, 32-2, 32-2, ui_color);
+    App_Syscall_DrawFont(layerId, 32*3+8, 0, 'M', black);
+    App_Syscall_DrawFont(layerId, 32*3+16, 0, 'k', black);
+    App_Syscall_DrawFont(layerId, 32*3+4, 16, 'D', black);
+    App_Syscall_DrawFont(layerId, 32*3+12, 16, 'i', black);
+    App_Syscall_DrawFont(layerId, 32*3+20, 16, 'r', black);
+
+    //テキストファイル作成
+    App_Syscall_DrawSquare(layerId, 32*4+1, 1, 32-2, 32-2, ui_color);
+    App_Syscall_DrawFont(layerId, 32*4+8, 0, 'M', black);
+    App_Syscall_DrawFont(layerId, 32*4+16, 0, 'k', black);
+    App_Syscall_DrawFont(layerId, 32*4+4, 16, 'T', black);
+    App_Syscall_DrawFont(layerId, 32*4+12, 16, 'x', black);
+    App_Syscall_DrawFont(layerId, 32*4+20, 16, 't', black);
+
+    //上スクロールボタン
+    App_Syscall_DrawSquare(layerId, 32*5+16+1, 1, 32-2, 16-2, ui_color);
+    App_Syscall_DrawFont(layerId, 32*5+16+8, 0, 'u', black);
+    App_Syscall_DrawFont(layerId, 32*5+16+16, 0, 'p', black);
+
+    //下スクロールボタン
+    App_Syscall_DrawSquare(layerId, 32*5+16+1, 16+1, 32-2, 16-2, ui_color);
+    App_Syscall_DrawFont(layerId, 32*5+16, 16, 'd', black);
+    App_Syscall_DrawFont(layerId, 32*5+16+8, 16, 'o', black);
+    App_Syscall_DrawFont(layerId, 32*5+16+8*2, 16, 'w', black);
+    App_Syscall_DrawFont(layerId, 32*5+16+8*3, 16, 'n', black);
+
     //OpenWith...
     App_Syscall_DrawFont(layerId, width-32*3, 0, 'O', black);
     App_Syscall_DrawFont(layerId, width-32*3+8, 0, 'p', black);
@@ -441,24 +617,6 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, width-32*2+4+8, 16, 'a', black);
     App_Syscall_DrawFont(layerId, width-32*2+4+8*2, 16, 'd', black);
 
-    //移動ボタン
-    App_Syscall_DrawSquare(layerId, 1, 1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, 4, 10, 'M', black);
-    App_Syscall_DrawFont(layerId, 4+8, 10, 'o', black);
-    App_Syscall_DrawFont(layerId, 4+8*2, 10, 'v', black);
-
-    //コピーボタン
-    App_Syscall_DrawSquare(layerId, 32+1, 1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, 32+4, 10, 'C', black);
-    App_Syscall_DrawFont(layerId, 32+4+8, 10, 'p', black);
-    App_Syscall_DrawFont(layerId, 32+4+8*2, 10, 'y', black);
-
-    //削除ボタン
-    App_Syscall_DrawSquare(layerId, 32*2+1, 1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, 32*2+4, 10, 'D', black);
-    App_Syscall_DrawFont(layerId, 32*2+4+8, 10, 'e', black);
-    App_Syscall_DrawFont(layerId, 32*2+4+8*2, 10, 'l', black);
-
 
     //ディレクトリを表示
     App_Syscall_DrawSquare(layerId, 0, 64, width, 16, ui_color);
@@ -477,11 +635,93 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, width-24+8, 64, 'i', gray);
     App_Syscall_DrawFont(layerId, width-24+8*2, 64, 'r', gray);
 
-    
-
-
-    //スクロールを表示
-
-
     return;
 }
+
+
+uintn mv(const ascii fromRelPath[DefaultBuffSize], const ascii toRelPath[DefaultBuffSize], ascii workingPath[DefaultBuffSize]) {
+    uintn status;
+
+    //絶対パスの取得
+    ascii fromAbsPath[DefaultBuffSize];
+    status = getAbsPath(fromRelPath, workingPath, fromAbsPath);
+    if(status) {
+        return 1;
+    }
+
+    ascii toAbsPath[DefaultBuffSize];
+    status = getAbsPath(toRelPath, workingPath, toAbsPath);
+    if(status) {
+        return 2;
+    }
+
+    //ファイルサイズの取得
+    File_DirectoryEntry dirEntBuff;
+    status = App_Syscall_GetDirEntryByPath(fromAbsPath, DefaultBuffSize, &dirEntBuff);
+    if(status) {
+        return 3;
+    }
+
+    //ファイルバッファへ書き込み
+    uint8 filebuff[dirEntBuff.size];
+    status = App_Syscall_MMapFile(fromAbsPath, DefaultBuffSize, sizeof(filebuff), filebuff);
+    if(status) {
+        return 4;
+    }
+
+    //ファイルの保存
+    status = App_Syscall_WriteFileFromMem(toAbsPath, DefaultBuffSize, dirEntBuff.size, filebuff);
+    if(status) {
+        return 5;
+    }
+
+    //元のファイルの消去
+    status = App_Syscall_RemoveFile(fromAbsPath, DefaultBuffSize);
+    if(status) {
+        return 6;
+    }
+
+    return 0;
+}
+
+
+uintn cp(const ascii fromRelPath[DefaultBuffSize], const ascii toRelPath[DefaultBuffSize], ascii workingPath[DefaultBuffSize]) {
+    uintn status;
+
+    //絶対パスの取得
+    ascii fromAbsPath[DefaultBuffSize];
+    status = getAbsPath(fromRelPath, workingPath, fromAbsPath);
+    if(status) {
+        return 1;
+    }
+
+    ascii toAbsPath[DefaultBuffSize];
+    status = getAbsPath(toRelPath, workingPath, toAbsPath);
+    if(status) {
+        return 2;
+    }
+
+    //ファイルサイズの取得
+    File_DirectoryEntry dirEntBuff;
+    status = App_Syscall_GetDirEntryByPath(fromAbsPath, DefaultBuffSize, &dirEntBuff);
+    if(status) {
+        return 3;
+    }
+
+    //ファイルバッファへ書き込み
+    uint8 filebuff[dirEntBuff.size];
+    status = App_Syscall_MMapFile(fromAbsPath, DefaultBuffSize, sizeof(filebuff), filebuff);
+    if(status) {
+        return 4;
+    }
+
+    //ファイルの保存
+    status = App_Syscall_WriteFileFromMem(toAbsPath, DefaultBuffSize, dirEntBuff.size, filebuff);
+    if(status) {
+        return 5;
+    }
+
+    return 0;
+}
+
+

@@ -234,6 +234,9 @@ Syscall_AppEnter:#16バイトアライメントの必要なし
     cmp $28, %rax
     je Syscall_AppEnter_Syscall_EditBox
 
+    cmp $29, %rax
+    je Syscall_AppEnter_Syscall_Prompt
+
     #無効なシステムコール番号
     mov $-1, %rax
     jmp Syscall_AppEnter_Exit
@@ -352,6 +355,10 @@ Syscall_AppEnter_Syscall_Alert:
 
 Syscall_AppEnter_Syscall_EditBox:
     call Syscall_EditBox
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_Prompt:
+    call Syscall_Prompt
     jmp Syscall_AppEnter_Exit
 
 Syscall_AppEnter_Exit:

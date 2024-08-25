@@ -478,7 +478,7 @@ sintn Syscall_RunApp(const ascii path[], uintn pathLength, optional ascii arg[32
         return -8;
     }
 
-    uint16 terminal = Task_New(Terminal_Main, 0, "Terminal");
+    uint16 terminal = Task_New(Terminal_Main, 0, path);
     if(terminal == 0) {
         Memory_FreePages(runningTaskId, (expandSize + 0xfff)>>12, elfExpandBuff);
         Memory_FreePages(runningTaskId, (dirEntBuff.size + 0xfff)>>12, elfbuff);
@@ -803,6 +803,15 @@ sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn
                 break;
         }
     }
+
+    return 0;
+}
+
+
+sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_TextBox_Data* data) {
+    if(data == NULL || data->buff == NULL || data->buffSize == 0) return 1;
+
+    
 
     return 0;
 }

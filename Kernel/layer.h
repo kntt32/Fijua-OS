@@ -52,8 +52,6 @@ typedef struct {
     uintn leftButton;
     uintn oldLeftButton;
 
-    sintn relativeScroll;
-
     uintn changedFlag;
 } Layer_Mouse;
 
@@ -78,7 +76,7 @@ void Layer_Init(void);
 
 void Layer_Update(void);
 
-void Layer_Mouse_NotifyUpdate(uintn x, uintn y, uintn leftButton, sintn relativeScroll);
+void Layer_Mouse_NotifyUpdate(uintn x, uintn y, uintn leftButton);
 
 uintn Layer_Window_New(uint16 taskId, ascii name[], sintn x, sintn y, uintn width, uintn height);
 

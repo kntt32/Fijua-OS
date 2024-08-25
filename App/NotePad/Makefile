@@ -21,9 +21,9 @@ endif
 a.elf: main.o app_x64.o
 	ld.lld --entry main -z norelro --static -pie -o a.elf $^
 ifeq ($(OS), Windows_NT)
-	copy a.elf ..\..\disk\App\filemanager.elf
+	copy a.elf ..\..\disk\App\notepad.elf
 else
-	cp a.elf ../../disk/App/filemanager.elf
+	cp a.elf ../../disk/App/notepad.elf
 endif
 
 main.o: main.c

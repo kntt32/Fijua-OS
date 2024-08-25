@@ -73,8 +73,6 @@ void Layer_Init(void) {
     layer.Mouse.leftButton = 0;
     layer.Mouse.oldLeftButton = 0;
 
-    layer.Mouse.relativeScroll = 0;
-
     layer.Mouse.changedFlag = 0;
 
     return;
@@ -141,7 +139,6 @@ static void Layer_Update_WindowState(void) {
             message.data.MouseLayerEvent.layerId = targetWindow->layerId;
             message.data.MouseLayerEvent.x = (sintn)layer.Mouse.Draw.x - targetWindow->Draw.x - window_shadow_overThick;
             message.data.MouseLayerEvent.y = (sintn)layer.Mouse.Draw.y - targetWindow->Draw.y - window_shadow_overThick - window_titleBar_height;
-            message.data.MouseLayerEvent.relativeScroll = layer.Mouse.relativeScroll;
             message.data.MouseLayerEvent.leftButton = layer.Mouse.leftButton;
 
             Message_EnQueue(targetWindow->taskId, &message);
@@ -152,7 +149,6 @@ static void Layer_Update_WindowState(void) {
     layer.Mouse.Drag.x = 0;
     layer.Mouse.Drag.y = 0;
     layer.Mouse.oldLeftButton = layer.Mouse.leftButton;
-    layer.Mouse.relativeScroll = 0;
     layer.Mouse.leftButton = 0;
 
 
@@ -772,7 +768,7 @@ void Layer_Taskbar_SetTaskId(uint16 taskId) {
 
 
 //マウス更新をLayerモジュールに通知
-void Layer_Mouse_NotifyUpdate(uintn x, uintn y, uintn leftButton, sintn relativeScroll) {
+void Layer_Mouse_NotifyUpdate(uintn x, uintn y, uintn leftButton) {
     if(layer.isDrawingFlag) return;
     if(leftButton) {
         layer.Mouse.Drag.x = (sintn)x - (sintn)layer.Mouse.Draw.oldx;
@@ -783,7 +779,6 @@ void Layer_Mouse_NotifyUpdate(uintn x, uintn y, uintn leftButton, sintn relative
     layer.Mouse.Draw.x = x;
     layer.Mouse.Draw.y = y;
     layer.changedFlag = 1;
-    layer.Mouse.relativeScroll = relativeScroll;
 
     layer.Mouse.changedFlag = 1;
     

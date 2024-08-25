@@ -33,7 +33,17 @@ uintn cp(const ascii fromRelPath[DefaultBuffSize], const ascii toRelPath[Default
 
 sintn main(ascii arg[32]) {
     App_Syscall_ExitStdIo();
-    //App_Syscall_StdOut("Hello", sizeof("Hello"));
+
+    if(!(arg == NULL || arg[0] == '\0')) {
+        for(uintn i=0; i<32; i++) {
+            path[i] = arg[i];
+            if(arg[i] == '\0') break;
+            if(i == 31) {
+                path[0] = '\0';
+                break;
+            }
+        }
+    }
 
     if(App_Syscall_NewWindow(&layerId, 50, 50, width, height, "FileManager")) return 0;
 
@@ -417,7 +427,7 @@ void respondMouse(Task_Message* message) {
             for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
                 if(64+16+i*32-scroll <= (sintn)message->data.MouseLayerEvent.y && (sintn)message->data.MouseLayerEvent.y < 64+16+32+i*32-scroll) {
                     selectedIndex = i;
-                    if(dirEntData.dirEntList[i].type == File_Directory) {
+                    if(dirEntData.dirEntList[i].type == File_Directory && (sintn)width - 100 <= message->data.MouseLayerEvent.x) {
                         ascii absPath[DefaultBuffSize];
                         if(getAbsPath(
                             dirEntData.dirEntList[i].name,
@@ -475,7 +485,7 @@ void flush(void) {
 
     if(dirEntData.isExist) {
         for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
-            if(i == selectedIndex) {
+            if(i == selectedIndex && 64 <= 64+16+i*32-scroll) {
                 App_Syscall_DrawSquare(layerId, 0, 64+16+i*32-scroll, width, 32, blue);
             }
 
@@ -485,9 +495,7 @@ void flush(void) {
             }
 
             if(dirEntData.dirEntList[i].type != File_Directory) {
-                if(dirEntData.dirEntList[i].size == 0) {
-                    App_Syscall_DrawFont(layerId, width-32-8, 64+16+10+i*32-scroll, '0', black);
-                }else {
+                if(dirEntData.dirEntList[i].size != 0) {
                     uintn log10uintn_size = log10uintn(dirEntData.dirEntList[i].size);
                     ascii strbuff[log10uintn_size+2];
                     sprintint(dirEntData.dirEntList[i].size, log10uintn_size+2, strbuff);

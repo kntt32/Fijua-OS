@@ -826,38 +826,13 @@ static sintn Syscall_TextBox_GetStrIndexByLine(const ascii* str, uintn index, ui
     return seekindex;
 }
 
-static sintn Syscall_TextBox_GetIndexFromOffset(const ascii* str, uintn x, uintn y, uintn max) {
-    sintn indexOfLine = Syscall_TextBox_GetStrIndexByLine(str, y, max);
-    if(indexOfLine < 0) return -1;
-
-    for(uintn i=0; i<max; i++) {
-        if(i == x) {
-            return indexOfLine+i;
-        }
-        if(str[i] == '\n' || str[i] == '\0') break;
-    }
-
-    return -1;
-}
-
-static sintn Syscall_TextBox_CountLine(const ascii* str, uintn max) {
-    for(uintn i=0; 1; i++) {
-        sintn index = Syscall_TextBox_GetStrIndexByLine(str, i, max);
-        if(index < 0) return i;
-    }
-}
-
 sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, App_Syscall_TextBox_Data* data) {
     if(data == NULL || data->buff == NULL || data->buffSize == 0) return 1;
 //width/8;
     data->buff[data->buffSize-1] = '\0';
 
-    Graphic_Color gray = {0xb0, 0xb0, 0xb0};
     Graphic_Color black = {0x00, 0x00, 0x00};
     Graphic_Color white = {0xff, 0xff, 0xff};
-    Graphic_Color editor_backcolor = {0xff, 0xff, 0xff};
-    Graphic_Color uicolor = {0xf0, 0xf0, 0xf0};
-
 
     Task_Message message;
 
@@ -1066,6 +1041,7 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, App_Syscall_TextBox_Data*
                         }
                         changedFlag = 1;
                     }else {
+                        Message_EnQueue(Task_GetRunningTaskId(), &message);
                         return 0;
                     }
                 }

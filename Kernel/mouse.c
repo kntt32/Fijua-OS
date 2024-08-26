@@ -78,7 +78,6 @@ void Mouse_CheckState(void) {
     uintn updateFlag = 0;
     sintn divNumX;
     sintn divNumY;
-    sintn divNumZ;
 
     Mouse_leftButton = 0;
 
@@ -89,7 +88,6 @@ void Mouse_CheckState(void) {
 
             divNumX = Efi_SimplePointerProtocol[i]->Mode->ResolutionX;
             divNumY = Efi_SimplePointerProtocol[i]->Mode->ResolutionY;
-            divNumZ = Efi_SimplePointerProtocol[i]->Mode->ResolutionZ;
             if(divNumX != 0) Mouse_x += (Mouse_speed*Efi_Mouse_State.RelativeMovementX)/divNumX;
             if(divNumY != 0) Mouse_y += (Mouse_speed*Efi_Mouse_State.RelativeMovementY)/divNumY;
             if(Efi_Mouse_State.LeftButton) Mouse_leftButton = 1;

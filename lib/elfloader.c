@@ -20,17 +20,6 @@ static void ElfLoader_Bss(in out void* start, in uintn size) {
 }
 
 
-//compare two string
-static uintn ElfLoader_CmpStr(in char str1[], in char str2[]) {
-    if(str1 == NULL || str2 == NULL) return 0;
-
-    for(uintn i=0; 1; i++) {
-        if(str1[i] == '\0') return i;
-        if(str1[i] != str2[i]) return 0;
-    }
-}
-
-
 //Get property about elf file
 unsigned int ElfLoader_GetProperty(in const void* file, in optional void* loadAddr, out optional void** entryPointPtr, out optional uint16* machineTypePtr) {
     if(file == NULL) return 1;

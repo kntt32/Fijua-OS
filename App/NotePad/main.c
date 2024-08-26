@@ -25,6 +25,7 @@ typedef struct {
 } NotePad;
 
 void NotePad_init(void);
+void respondMouse(Task_Message* message);
 void flush(void);
 uintn NotePad_open(ascii path[DefaultBuffSize]);
 
@@ -32,6 +33,12 @@ uintn NotePad_open(ascii path[DefaultBuffSize]);
 NotePad notePad;
 
 sintn main(ascii arg[32]) {
+    if(arg[0] == '\0') {
+        App_Syscall_Alert("No File Input", sizeof("No File Input"));
+        return 1;
+    }
+    App_Syscall_ExitStdIo();
+
     NotePad_init();
     NotePad_open(arg);
     flush();
@@ -40,6 +47,16 @@ sintn main(ascii arg[32]) {
     while(1) {
         App_Syscall_TextBox(notePad.layerId, 0, 32, &(notePad.textBoxData));
         App_Syscall_ReadMessage(&message);
+        switch(message.type) {
+            case Task_Message_CloseWindow:
+                App_Syscall_Exit(0);
+            case Task_Message_Quit:
+                App_Syscall_Exit(0);
+            case Task_Message_MouseLayerEvent:
+                respondMouse(&message);
+            default:
+                break;
+        }
     }
 
     return 0;
@@ -99,30 +116,32 @@ uintn NotePad_open(ascii path[DefaultBuffSize]) {
 }
 
 
+void respondMouse(Task_Message* message) {
+    //保存ボタン
+    if(0 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32
+        && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+        //save
+        for(uintn i=0; i<notePad.textBoxData.buffSize; i++) {
+            if(notePad.textBoxData.buff[i] == '\0') {
+                App_Syscall_WriteFileFromMem(notePad.path, DefaultBuffSize, i+1, notePad.textBoxData.buff);
+                return;
+            }
+        }
+        App_Syscall_Alert("Failed", sizeof("Failed"));
+    }
+
+    return;
+}
+
+
 void flush(void) {
     App_Syscall_DrawSquare(notePad.layerId, 0, 0, width, 32, gray);
 
-    App_Syscall_DrawSquare(notePad.layerId, 1, 1, 32-2, 32-2, ui_color);//new
-    App_Syscall_DrawFont(notePad.layerId, 4, 10, 'N', black);
-    App_Syscall_DrawFont(notePad.layerId, 12, 10, 'e', black);
-    App_Syscall_DrawFont(notePad.layerId, 20, 10, 'w', black);
-
-    App_Syscall_DrawSquare(notePad.layerId, 32+1, 1, 32-2, 32-2, ui_color);//save
-    App_Syscall_DrawFont(notePad.layerId, 32, 10, 'S', black);
-    App_Syscall_DrawFont(notePad.layerId, 32+8, 10, 'a', black);
-    App_Syscall_DrawFont(notePad.layerId, 32+8*2, 10, 'v', black);
-    App_Syscall_DrawFont(notePad.layerId, 32+8*3, 10, 'e', black);
-
-    App_Syscall_DrawSquare(notePad.layerId, width-32+1, 1, 32-2, 16-2, ui_color);//up
-    App_Syscall_DrawFont(notePad.layerId, width-32+8, 0, 'u', black);
-    App_Syscall_DrawFont(notePad.layerId, width-32+8*2, 0, 'p', black);
-
-    App_Syscall_DrawSquare(notePad.layerId, width-32+1, 16+1, 32-2, 16-2, ui_color);//down
-    App_Syscall_DrawFont(notePad.layerId, width-32, 16, 'd', black);
-    App_Syscall_DrawFont(notePad.layerId, width-32+8, 16, 'o', black);
-    App_Syscall_DrawFont(notePad.layerId, width-32+8*2, 16, 'w', black);
-    App_Syscall_DrawFont(notePad.layerId, width-32+8*3, 16, 'n', black);
-
+    App_Syscall_DrawSquare(notePad.layerId, 1, 1, 32-2, 32-2, ui_color);//save
+    App_Syscall_DrawFont(notePad.layerId, 0, 10, 'S', black);
+    App_Syscall_DrawFont(notePad.layerId, 8, 10, 'a', black);
+    App_Syscall_DrawFont(notePad.layerId, 8*2, 10, 'v', black);
+    App_Syscall_DrawFont(notePad.layerId, 8*3, 10, 'e', black);
 
     return;
 }

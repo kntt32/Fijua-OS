@@ -38,7 +38,7 @@ sintn main(ascii arg[32]) {
 
     Task_Message message;
     while(1) {
-        App_Syscall_TextBox(notePad.layerId, 0, 32, width, &(notePad.textBoxData));
+        App_Syscall_TextBox(notePad.layerId, 0, 32, &(notePad.textBoxData));
         App_Syscall_ReadMessage(&message);
     }
 
@@ -55,6 +55,11 @@ void NotePad_init(void) {
 
     notePad.textBoxData.buffSize = 0;
     notePad.textBoxData.buff = NULL;
+    notePad.textBoxData.width = width;
+    notePad.textBoxData.height = height-32;
+    notePad.textBoxData.scroll = 0;
+    notePad.textBoxData.cursorX = 0;
+    notePad.textBoxData.cursorY = 0;
 
     return;
 }

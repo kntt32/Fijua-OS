@@ -847,7 +847,7 @@ static sintn Syscall_TextBox_CountLine(const ascii* str, uintn max) {
     }
 }
 
-sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_TextBox_Data* data) {
+sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, App_Syscall_TextBox_Data* data) {
     if(data == NULL || data->buff == NULL || data->buffSize == 0) return 1;
 //width/8;
     data->buff[data->buffSize-1] = '\0';
@@ -861,11 +861,11 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
 
     Task_Message message;
 
-    if(Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8) < 0) {
+    if(Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8) < 0) {
         data->cursorX = 0;
         data->cursorY = 0;
     }else {
-        ascii* str = data->buff + Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8);
+        ascii* str = data->buff + Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8);
         for(uintn i=0; i<data->cursorX-1; i++) {
             if(str[i] == '\0') {
                 data->cursorX = 0;
@@ -875,20 +875,32 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
         }
     }
 
+    uintn changedFlag = 1;
+
     while(1) {
-        for(uintn i=0; 1; i++) {
-            sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, i, width/8);
-
-            Syscall_DrawSquare(layerId, x, y+i*16, width, 16, white);
-
-            if(index < 0) break;
-            for(uintn k=0; 1; k++) {
-                if(data->buff[index+k] == '\n' || data->buff[index+k] == '\0') break;
-
-                Syscall_DrawFont(layerId, x+8*k, y+i*16, data->buff[index+k], black);
-            }
+        if((sintn)data->cursorY-(sintn)data->scroll < 0) {
+            data->scroll = data->cursorY;
         }
-        Syscall_DrawSquare(layerId, x+8*data->cursorX, y+16*data->cursorY+14, 8, 2, black);
+        if((sintn)data->height/16 <= (sintn)data->cursorY-(sintn)data->scroll) {
+            data->scroll = data->cursorY - data->height/16 + 1;
+        }
+
+        if(changedFlag) {
+            changedFlag = 0;
+            for(uintn i=0; i<data->height/16; i++) {
+                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, i+data->scroll, data->width/8);
+
+                Syscall_DrawSquare(layerId, x, y+i*16, data->width, 16, white);
+
+                if(index < 0) break;
+                for(uintn k=0; 1; k++) {
+                    if(data->buff[index+k] == '\n' || data->buff[index+k] == '\0') break;
+
+                    Syscall_DrawFont(layerId, x+8*k, y+i*16, data->buff[index+k], black);
+                }
+            }
+            if(0 <= y+16*((sintn)data->cursorY - data->scroll)+14) Syscall_DrawSquare(layerId, x+8*data->cursorX, y+16*((sintn)data->cursorY - data->scroll)+14, 8, 2, black);
+        }
 
         Syscall_ReadMessage(&message);
         switch(message.type) {
@@ -899,6 +911,7 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                 Message_EnQueue(Task_GetRunningTaskId(), &message);
                 return -2;
             case Task_Message_KeyPushed:
+                changedFlag = 1;
                 if(message.data.KeyPushed.asciiCode != 0) {
 
                     for(uintn i=0; 1; i++) {
@@ -908,11 +921,11 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                                 if(data->cursorX == 0 && data->cursorY == 0) break;
 
                                 if(data->cursorX == 0) {
-                                    sintn index2 = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY-1, width/8);
+                                    sintn index2 = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY-1, data->width/8);
                                     if(index2 < 0) return -3;
                                     for(uintn k=index2; 1; k++) {
                                         if(data->buff[k] == '\n' || data->buff[k] == '\0') {
-                                            data->cursorX = k;
+                                            data->cursorX = k-index2;
                                             break;
                                         }
                                     }
@@ -921,14 +934,14 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                                     data->cursorX --;
                                 }
 
-                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8);
+                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8);
                                 for(uintn i=index+data->cursorX; i<data->buffSize; i++) {
                                     data->buff[i] = data->buff[i+1];
                                     if(data->buff[i] == '\0') break;
                                 }
                             }else {
-                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8);
-                                if(i+1 == data->buffSize) {
+                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8);
+                                if(i+2 == data->buffSize) {
                                     break;
                                 }
                                 for(sintn k=i; (sintn)(index+data->cursorX)<=k; k--) {
@@ -936,7 +949,7 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                                 }
                                 data->buff[index+data->cursorX] = message.data.KeyPushed.asciiCode;
                                 data->cursorX ++;
-                                if(message.data.KeyPushed.asciiCode == '\n' || data->cursorX == width/8) {
+                                if(message.data.KeyPushed.asciiCode == '\n' || data->cursorX == data->width/8) {
                                     data->cursorX = 0;
                                     data->cursorY ++;
                                 }
@@ -947,8 +960,8 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
 
                 }else {
                     switch(message.data.KeyPushed.scanCode) {
-                        case EFI_SIMPLE_INPUT_SCANCODE_RIGHTARROW:
-                            sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8);
+                        case EFI_SIMPLE_INPUT_SCANCODE_RIGHTARROW:;
+                            sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8);
                             if(data->buff[index+data->cursorX] == '\n') {
                                 data->cursorX = 0;
                                 data->cursorY ++;
@@ -962,7 +975,7 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                             if(data->cursorX == 0) {
                                 if(data->cursorY != 0) {
                                     data->cursorY --;
-                                    sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8);
+                                    sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8);
                                     for(uintn i=index; 1; i++) {
                                         if(data->buff[i] == '\n' || data->buff[i] == '\0') {
                                             data->cursorX = i-index;
@@ -979,7 +992,7 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                                 data->cursorX = 0;
                             }else {
                                 data->cursorY --;
-                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8);
+                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8);
                                 for(uintn i=index; i<index+data->cursorX; i++) {
                                     if(data->buff[i] == '\0' || data->buff[i] == '\n') {
                                         data->cursorX = i-index;
@@ -989,8 +1002,8 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                             }
                             break;
                         case EFI_SIMPLE_INPUT_SCANCODE_DOWNARROW:
-                            if(Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY+1, width/8) < 0) {
-                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8);
+                            if(Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY+1, data->width/8) < 0) {
+                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8);
                                 for(uintn i=index; 1; i++) {
                                     if(data->buff[i] == '\n' || data->buff[i] == '\0') {
                                         data->cursorX = i-index;
@@ -999,7 +1012,7 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                                 }
                             }else {
                                 data->cursorY ++;
-                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, width/8);
+                                sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->cursorY, data->width/8);
                                 for(uintn i=index; i<index+data->cursorX; i++) {
                                     if(data->buff[i] == '\n' || data->buff[i] == '\0') {
                                         data->cursorX = i-index;
@@ -1016,22 +1029,42 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_
                 break;
             case Task_Message_MouseLayerEvent:
                 if(message.data.MouseLayerEvent.layerId == layerId && message.data.MouseLayerEvent.leftButton == 1) {
-                    if((sintn)x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(x+width)
-                        && (sintn)y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(y+16*Syscall_TextBox_CountLine(data->buff, width/8))) {
-                        sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, (message.data.MouseLayerEvent.y - y)/16, width/8);
-                        if(index < 0) break;
-                        for(uintn i=0; i<(message.data.MouseLayerEvent.x - x)/8; i++) {
-                            if(data->buff[index + i] == '\0' || data->buff[index + i] == '\n') {
-                                data->cursorX = i;
-                                data->cursorY = (message.data.MouseLayerEvent.y - y)/16;
-                                break;
+                    if((sintn)x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(x+data->width)
+                        && (sintn)y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(y+data->height)) {
+                        sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, data->scroll + (message.data.MouseLayerEvent.y - y)/16, data->width/8);
+                        if(index < 0) {
+                            for(uintn i=0; 1; i++) {
+                                if(Syscall_TextBox_GetStrIndexByLine(data->buff, i, data->width/8) < 0) {
+                                    if(i == 0) {
+                                        data->cursorX = 0;
+                                        data->cursorY = 0;
+                                    }else {
+                                        sintn index = Syscall_TextBox_GetStrIndexByLine(data->buff, i-1, data->width/8);
+                                        data->cursorY = i-1;
+                                        for(uintn k=0; 1; k++) {
+                                            if(data->buff[index + k] == '\0' || data->buff[index + k] == '\n') {
+                                                data->cursorX = k;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    break;
+                                }
                             }
-                            if(i == ((message.data.MouseLayerEvent.x - x)/8)-1) {
-                                data->cursorX = (message.data.MouseLayerEvent.x - x)/8;
-                                data->cursorY = (message.data.MouseLayerEvent.y - y)/16;
+                        }else {
+                            for(uintn i=0; i<(message.data.MouseLayerEvent.x - x)/8; i++) {
+                                if(data->buff[index + i] == '\0' || data->buff[index + i] == '\n') {
+                                    data->cursorX = i;
+                                    data->cursorY = data->scroll + (message.data.MouseLayerEvent.y - y)/16;
+                                    break;
+                                }
+                                if(i == ((message.data.MouseLayerEvent.x - x)/8)-1) {
+                                    data->cursorX = (message.data.MouseLayerEvent.x - x)/8;
+                                    data->cursorY = data->scroll + (message.data.MouseLayerEvent.y - y)/16;
+                                }
                             }
                         }
-                            
+                        changedFlag = 1;
                     }else {
                         return 0;
                     }

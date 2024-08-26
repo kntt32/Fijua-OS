@@ -5,6 +5,9 @@ typedef struct {
     ascii* buff;
     uintn buffSize;
 
+    uintn width;
+    uintn height;
+
     uintn scroll;
     uintn cursorX;
     uintn cursorY;

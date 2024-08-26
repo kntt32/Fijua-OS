@@ -74,6 +74,6 @@ sintn App_Syscall_EditBox(uintn layerId, uintn x, uintn y, uintn height, out asc
 
 sintn App_Syscall_Prompt(const ascii question[], uintn questionLength, out ascii buff[], uintn buffLength);
 
-sintn App_Syscall_TextBox(uintn layerId, uintn x, uintn y, uintn width, App_Syscall_TextBox_Data* data);
+sintn App_Syscall_TextBox(uintn layerId, uintn x, uintn y, App_Syscall_TextBox_Data* data);
 
 #endif

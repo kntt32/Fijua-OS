@@ -8,6 +8,7 @@
 #include "x64.h"
 #include "console.h"
 #include "functions.h"
+#include "syscall.h"
 #include <app_x64.h>
 
 void Taskbar_Flush(uintn layerId, const Layer* layer);

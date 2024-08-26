@@ -8,7 +8,7 @@
 #include "x64.h"
 #include "functions.h"
 
-#define IsValidPathChar(c) (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || (c == '_') || (c == '.'))
+#define IsValidPathChar(c) (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || (c == '_') || (c == '.') || (c == '-'))
 
 extern KernelInputStruct* KernelInput;
 

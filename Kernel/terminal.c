@@ -4,6 +4,7 @@
 #include "task.h"
 #include "terminal.h"
 #include "file.h"
+#include "syscall.h"
 #include <app_x64.h>
 
 #include "functions.h"

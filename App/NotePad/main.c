@@ -26,12 +26,14 @@ typedef struct {
 
 void NotePad_init(void);
 void flush(void);
+uintn NotePad_open(ascii path[DefaultBuffSize]);
 
 
 NotePad notePad;
 
 sintn main(ascii arg[32]) {
     NotePad_init();
+    NotePad_open(arg);
     flush();
 
     Task_Message message;
@@ -58,9 +60,37 @@ void NotePad_init(void) {
 }
 
 
-sintn NotePad_open(ascii path[DefaultBuffSize]) {
+uintn NotePad_open(ascii path[DefaultBuffSize]) {
+    File_DirectoryEntry dirEnt;
 
+    for(uintn i=0; i<DefaultBuffSize; i++) {
+        notePad.path[i] = path[i];
+        if(path[i] == '\0') break;
+    }
 
+    if(App_Syscall_GetDirEntryByPath(notePad.path, DefaultBuffSize, &dirEnt)) {
+        App_Syscall_Alert("File Not Found", sizeof("File Not Found"));
+        return 1;
+    }
+
+    App_Syscall_FreePages((notePad.textBoxData.buffSize + 0xfff)>>12, notePad.textBoxData.buff);
+    notePad.textBoxData.buffSize = 0;
+    notePad.textBoxData.buff = NULL;
+
+    if(App_Syscall_AllocPage((dirEnt.size + 0xfff)>>12, (void**)&(notePad.textBoxData.buff))) {
+        App_Syscall_Alert("Failed to Open", sizeof("Failed to Open"));
+        App_Syscall_Exit(-1);
+    }
+
+    notePad.textBoxData.buffSize = ((dirEnt.size + 1 + 0xfff)>>12)<<12;
+
+    if(App_Syscall_MMapFile(notePad.path, DefaultBuffSize, notePad.textBoxData.buffSize, notePad.textBoxData.buff)) {
+        App_Syscall_Alert("File Not Found", sizeof("File Not Found"));
+        return 2;
+    }
+    notePad.textBoxData.buff[dirEnt.size] = '\0';
+
+    return 0;
 }
 
 

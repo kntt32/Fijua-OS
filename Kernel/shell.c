@@ -4,6 +4,7 @@
 #include "task.h"
 #include "shell.h"
 #include "file.h"
+#include "syscall.h"
 #include <app_x64.h>
 
 #define Shell_DefaultBuffSize (128)

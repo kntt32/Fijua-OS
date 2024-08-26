@@ -3,6 +3,7 @@
 #include "../../Kernel/queue.h"
 #include "../../Kernel/task.h"
 #include "../../Kernel/file.h"
+#include "../../Kernel/syscall.h"
 #include <app_x64.h>
 #include <efi.h>
 #include <efi_simple_text_input_protocol.h>

@@ -33,7 +33,8 @@
 .global App_Syscall_GetClipBoard
 .global App_Syscall_DrawButton
 .global App_Syscall_DrawButton_Pushed
-.global App_Syscall_DrawSquare_NotActive
+.global App_Syscall_DrawButton_NotActive
+.global App_Syscall_DrawScrollBar
 
 .text
 
@@ -213,8 +214,12 @@ App_Syscall_DrawButton_Pushed:
     callq *(0x100000)
     ret
 
-App_Syscall_DrawSquare_NotActive:
+App_Syscall_DrawButton_NotActive:
     mov $35, %rax
     callq *(0x100000)
     ret
 
+App_Syscall_DrawScrollBar:
+    mov $36, %rax
+    callq *(0x100000)
+    ret

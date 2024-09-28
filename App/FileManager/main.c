@@ -294,8 +294,8 @@ void respondMouse(Task_Message* message) {
         //メモ帳で開く
         if((sintn)width-32*2+1 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width-32*2+1+32
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y <= 32) {
-            App_Syscall_DrawButton_Pushed(layerId, width-32*2+1, 0+1, 32-2, 32-2, "");
             if(selectedIndex != -1) {
+                App_Syscall_DrawButton_Pushed(layerId, width-32*2+1, 0+1, 32-2, 32-2, "");
                 ascii absPath[DefaultBuffSize];
                 if(getAbsPath(dirEntData.dirEntList[selectedIndex].name, path, absPath)) {
                     App_Syscall_Alert("Error", sizeof("Error"));
@@ -303,8 +303,8 @@ void respondMouse(Task_Message* message) {
                 if(App_Syscall_RunApp("app/notepad.elf", DefaultBuffSize, absPath)) {
                     App_Syscall_Alert("Execution Failed", sizeof("Execution Failed"));
                 }
+                flush();
             }
-            flush();
         }
 
         //実行ボタンApp_Syscall_DrawSquare(layerId, width-32+1, 1, 32-2, 32-2, ui_color);
@@ -441,24 +441,49 @@ void respondMouse(Task_Message* message) {
         }
 
         //ファイルリストに対しての操作
-        if(64 <= message->data.MouseLayerEvent.y) {
+        if(64 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.x < width-16) {
             for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
                 if(64+16+i*32-scroll <= (sintn)message->data.MouseLayerEvent.y && (sintn)message->data.MouseLayerEvent.y < 64+16+32+i*32-scroll) {
                     selectedIndex = i;
-                    if(dirEntData.dirEntList[i].type == File_Directory && (sintn)width - 100 <= message->data.MouseLayerEvent.x) {
-                        ascii absPath[DefaultBuffSize];
-                        if(getAbsPath(
-                            dirEntData.dirEntList[i].name,
-                            path,
-                            absPath)) {
-                            return;
+                    
+                    
+                    if(dirEntData.dirEntList[i].type == File_Directory) {
+                        //ディレクトリを開く
+                        if((sintn)width - 32-16 <= message->data.MouseLayerEvent.x) {
+                            App_Syscall_DrawButton_Pushed(layerId, width-32-16+1, 64+16+i*32-scroll+1, 30, 30, ">");
+
+                            ascii absPath[DefaultBuffSize];
+                            if(getAbsPath(
+                                dirEntData.dirEntList[i].name,
+                                path,
+                                absPath)) {
+                                return;
+                            }
+                            for(uintn k=0; k<DefaultBuffSize; k++) {
+                                path[k] = absPath[k];
+                                if(path[k] == '\0') break;
+                            }
+                            load();
                         }
-                        for(uintn k=0; k<DefaultBuffSize; k++) {
-                            path[k] = absPath[k];
-                            if(path[k] == '\0') break;
+                    }else {
+                        //ファイル操作
+                        if(dirEntData.dirEntList[i].type != File_Directory) {
+                            uintn mouseX = message->data.MouseLayerEvent.x;
+
+                            //ファイル開く
+                            if(width-32-16+1 <= mouseX && mouseX <= width-16+1) {
+                                App_Syscall_DrawButton_Pushed(layerId, width-32-16+1, 64+16+i*32-scroll+1, 30, 30, "Open");
+                                ascii absPath[DefaultBuffSize];
+                                if(getAbsPath(dirEntData.dirEntList[i].name, path, absPath)) {
+                                    App_Syscall_Alert("Error", sizeof("Error"));
+                                }
+                                if(App_Syscall_RunApp("app/notepad.elf", DefaultBuffSize, absPath)) {
+                                    App_Syscall_Alert("Execution Failed", sizeof("Execution Failed"));
+                                }
+                            }
                         }
-                        load();
                     }
+
                     flush();
                     break;
                 }
@@ -514,19 +539,14 @@ void flush(void) {
                 App_Syscall_DrawFont(layerId, 4+k*8, 64+16+10+i*32-scroll, dirEntData.dirEntList[i].name[k], black);
             }
 
-            if(dirEntData.dirEntList[i].type != File_Directory) {
-                if(dirEntData.dirEntList[i].size != 0) {
-                    uintn log10uintn_size = log10uintn(dirEntData.dirEntList[i].size);
-                    ascii strbuff[log10uintn_size+2];
-                    sprintint(dirEntData.dirEntList[i].size, log10uintn_size+2, strbuff);
-                    for(uintn k=0; k<log10uintn_size+1; k++) {
-                        App_Syscall_DrawFont(layerId, width-32-8*(log10uintn_size-k), 64+16+10+i*32-scroll, strbuff[k], black);
-                    }
-                }
-            }
-
             if(dirEntData.dirEntList[i].type == File_Directory) {
-                App_Syscall_DrawFont(layerId, width-12, 64+16+10+i*32-scroll, '>', black);
+                App_Syscall_DrawButton(layerId, width-32-16+1, 64+16+i*32-scroll+1, 30, 30, ">");
+            }else {
+                App_Syscall_DrawButton(layerId, width-32-16+1, 64+16+i*32-scroll+1, 30, 30, "Open");
+                App_Syscall_DrawButton(layerId, width-32*2-16+1, 64+16+i*32-scroll+1, 30, 30, "Run");
+                App_Syscall_DrawButton(layerId, width-32*3-16+1, 64+16+i*32-scroll+1, 30, 30, "Mov");
+                App_Syscall_DrawButton(layerId, width-32*4-16+1, 64+16+i*32-scroll+1, 30, 30, "Cpy");
+                App_Syscall_DrawButton(layerId, width-32*5-16+1, 64+16+i*32-scroll+1, 30, 30, "Del");
             }
 
             if(0 <= 64+16+32+i*32-scroll-1) App_Syscall_DrawSquare(layerId, 0, 64+16+32+i*32-scroll-1, width, 1, gray);
@@ -579,13 +599,13 @@ void flush(void) {
         App_Syscall_DrawButton(layerId, 32*2+1, 0+1, 32-2, 32-2, "Del");
     }else {
         //移動ボタン
-        App_Syscall_DrawSquare_NotActive(layerId, 0+1, 0+1, 32-2, 32-2, "Mov");
+        App_Syscall_DrawButton_NotActive(layerId, 0+1, 0+1, 32-2, 32-2, "Mov");
 
         //コピーボタン
-        App_Syscall_DrawSquare_NotActive(layerId, 32+1, 0+1, 32-2, 32-2, "Cpy");
+        App_Syscall_DrawButton_NotActive(layerId, 32+1, 0+1, 32-2, 32-2, "Cpy");
 
         //削除ボタン
-        App_Syscall_DrawSquare_NotActive(layerId, 32*2+1, 0+1, 32-2, 32-2, "Del");
+        App_Syscall_DrawButton_NotActive(layerId, 32*2+1, 0+1, 32-2, 32-2, "Del");
     }
 
     //ディレクトリ作成
@@ -635,10 +655,10 @@ void flush(void) {
         App_Syscall_DrawFont(layerId, width-32*2+4+8*2, 16, 'd', black);
     }else {
         //実行ボタン
-        App_Syscall_DrawSquare_NotActive(layerId, width-32+1, 0+1, 32-2, 32-2, "Run");
+        App_Syscall_DrawButton_NotActive(layerId, width-32+1, 0+1, 32-2, 32-2, "Run");
 
         //メモ帳で開くボタン
-        App_Syscall_DrawSquare_NotActive(layerId, width-32*2+1, 0+1, 32-2, 32-2, "");
+        App_Syscall_DrawButton_NotActive(layerId, width-32*2+1, 0+1, 32-2, 32-2, "");
         App_Syscall_DrawFont(layerId, width-32*2, 0, 'N', gray);
         App_Syscall_DrawFont(layerId, width-32*2+8, 0, 'o', gray);
         App_Syscall_DrawFont(layerId, width-32*2+8*2, 0, 't', gray);
@@ -650,21 +670,24 @@ void flush(void) {
 
 
     //ディレクトリを表示
-    App_Syscall_DrawSquare(layerId, 0, 64, width, 16, ui_color);
-    App_Syscall_DrawSquare(layerId, 0, 64+16-1, width, 1, gray);
+    App_Syscall_DrawSquare(layerId, 0, 64, width-16, 16, ui_color);
+    App_Syscall_DrawSquare(layerId, 0, 64+16-1, width-16, 1, gray);
     App_Syscall_DrawFont(layerId, 2, 64, 'n', gray);
     App_Syscall_DrawFont(layerId, 2+8, 64, 'a', gray);
     App_Syscall_DrawFont(layerId, 2+8*2, 64, 'm', gray);
     App_Syscall_DrawFont(layerId, 2+8*3, 64, 'e', gray);
 
-    App_Syscall_DrawFont(layerId, width-64, 64, 's', gray);
-    App_Syscall_DrawFont(layerId, width-64+8, 64, 'i', gray);
-    App_Syscall_DrawFont(layerId, width-64+8*2, 64, 'z', gray);
-    App_Syscall_DrawFont(layerId, width-64+8*3, 64, 'e', gray);
+    App_Syscall_DrawFont(layerId, width-64-16, 64, 's', gray);
+    App_Syscall_DrawFont(layerId, width-64-16+8, 64, 'i', gray);
+    App_Syscall_DrawFont(layerId, width-64-16+8*2, 64, 'z', gray);
+    App_Syscall_DrawFont(layerId, width-64-16+8*3, 64, 'e', gray);
 
-    App_Syscall_DrawFont(layerId, width-24, 64, 'd', gray);
-    App_Syscall_DrawFont(layerId, width-24+8, 64, 'i', gray);
-    App_Syscall_DrawFont(layerId, width-24+8*2, 64, 'r', gray);
+    //スクロールバー
+    uintn view_height = height - 64 - 16;
+    if(view_height < dirEntData.entryCount*32) {
+        view_height = dirEntData.entryCount*32;
+    }
+    App_Syscall_DrawScrollBar(layerId, width-16, 64, height-64, 0, view_height);
 
     return;
 }

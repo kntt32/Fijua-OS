@@ -84,6 +84,8 @@ sintn App_Syscall_DrawButton(uintn layerId, uintn x, uintn y, uintn width, uintn
 
 sintn App_Syscall_DrawButton_Pushed(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
 
-sintn App_Syscall_DrawSquare_NotActive(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
+sintn App_Syscall_DrawButton_NotActive(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
+
+sintn App_Syscall_DrawScrollBar(uintn layerId, uintn x, uintn y, uintn display_height, uintn offset, uintn view_height);
 
 #endif

@@ -1167,8 +1167,20 @@ sintn Syscall_DrawButton_Pushed(uintn layerId, uintn x, uintn y, uintn width, ui
     return -2;
 }
 
-sintn Syscall_DrawSquare_NotActive(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str) {
+sintn Syscall_DrawButton_NotActive(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str) {
     Syscall_DrawButton_(layerId, x, y, width, height, str, Syscall_DrawButton_State_NotActive);
+    return 0;
+}
+
+sintn Syscall_DrawScrollBar(uintn layerId, uintn x, uintn y, uintn height, uintn offset, uintn page_height) {
+    Syscall_DrawSquare(layerId, x, y, 16, height, ui_color);
+    Syscall_DrawSquare(layerId, x, y, 1, height, light);
+    Syscall_DrawSquare(layerId, x+16-1, y, 1, height, shudow);
+    Syscall_DrawSquare(layerId, x, y, 16, 1, light);
+    Syscall_DrawSquare(layerId, x, y+height-1, 16, 1, shudow);
+
+    //Syscall_DrawSquare(layerId, x, y, 16, 16, )
+
     return 0;
 }
 

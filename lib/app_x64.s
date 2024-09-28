@@ -29,6 +29,11 @@
 .global App_Syscall_EditBox
 .global App_Syscall_Prompt
 .global App_Syscall_TextBox
+.global App_Syscall_SetClipBoard
+.global App_Syscall_GetClipBoard
+.global App_Syscall_DrawButton
+.global App_Syscall_DrawButton_Pushed
+.global App_Syscall_DrawSquare_NotActive
 
 .text
 
@@ -187,3 +192,29 @@ App_Syscall_TextBox:
     mov $30, %rax
     callq *(0x100000)
     ret
+
+App_Syscall_SetClipBoard:
+    mov $31, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_GetClipBoard:
+    mov $32, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_DrawButton:
+    mov $33, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_DrawButton_Pushed:
+    mov $34, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_DrawSquare_NotActive:
+    mov $35, %rax
+    callq *(0x100000)
+    ret
+

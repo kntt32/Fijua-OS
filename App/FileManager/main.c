@@ -265,6 +265,8 @@ void respondMouse(Task_Message* message) {
         //戻るボタン
         if(0 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32
             && 32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 64) {
+            App_Syscall_DrawButton_Pushed(layerId, 0+1, 32+1, 32-2, 32-2, "<-");
+
             ascii absPath[DefaultBuffSize];
             if(getAbsPath(
                 "..",
@@ -276,6 +278,7 @@ void respondMouse(Task_Message* message) {
                 path[k] = absPath[k];
                 if(path[k] == '\0') break;
             }
+
             load();
             flush();
         }
@@ -283,6 +286,7 @@ void respondMouse(Task_Message* message) {
         //リロード
         if((sintn)(width-32) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width
             && 32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 64) {
+            App_Syscall_DrawButton_Pushed(layerId, width-32+0+1, 32+1, 32-2, 32-2, "");
             load();
             flush();
         }
@@ -290,6 +294,7 @@ void respondMouse(Task_Message* message) {
         //メモ帳で開く
         if((sintn)width-32*2+1 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width-32*2+1+32
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y <= 32) {
+            App_Syscall_DrawButton_Pushed(layerId, width-32*2+1, 0+1, 32-2, 32-2, "");
             if(selectedIndex != -1) {
                 ascii absPath[DefaultBuffSize];
                 if(getAbsPath(dirEntData.dirEntList[selectedIndex].name, path, absPath)) {
@@ -299,12 +304,14 @@ void respondMouse(Task_Message* message) {
                     App_Syscall_Alert("Execution Failed", sizeof("Execution Failed"));
                 }
             }
+            flush();
         }
 
         //実行ボタンApp_Syscall_DrawSquare(layerId, width-32+1, 1, 32-2, 32-2, ui_color);
         if((sintn)(width-32) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
             if(selectedIndex == -1) return;
+            App_Syscall_DrawButton_Pushed(layerId, width-32+1, 0+1, 32-2, 32-2, "Run");
             ascii absPath[DefaultBuffSize];
             if(getAbsPath(
                 dirEntData.dirEntList[selectedIndex].name,
@@ -322,7 +329,7 @@ void respondMouse(Task_Message* message) {
         //パスバーApp_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, ui_color);
         if(32 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)(width-32)
             && 32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 64) {
-            App_Syscall_EditBox(layerId, 32+48, 32+1, 32-2, path, DefaultBuffSize);
+            App_Syscall_EditBox(layerId, 32+1, 32+1, 32-2, path, DefaultBuffSize);
             load();
             flush();
         }
@@ -330,6 +337,7 @@ void respondMouse(Task_Message* message) {
         //移動ボタン
         if(0 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            App_Syscall_DrawButton_Pushed(layerId, 0+1, 0+1, 32-2, 32-2, "Mov");
             if(selectedIndex != -1) {
                 ascii buff[DefaultBuffSize] = "";
                 if(!App_Syscall_Prompt("Input Destination Path", sizeof("Input Destination Path"), buff, DefaultBuffSize)) {
@@ -346,14 +354,15 @@ void respondMouse(Task_Message* message) {
         if(32 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 64
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
             if(selectedIndex != -1) {
+                App_Syscall_DrawButton_Pushed(layerId, 32+1, 0+1, 32-2, 32-2, "Cpy");
                 ascii buff[DefaultBuffSize] = "";
                 if(!App_Syscall_Prompt("Input Destination Path", sizeof("Input Destination Path"), buff, DefaultBuffSize)) {
                     if(cp(dirEntData.dirEntList[selectedIndex].name, buff, path)) {
                         App_Syscall_Alert("Copy Failed", sizeof("Copy Failed"));
                     }
                     load();
-                    flush();
                 }
+                flush();
             }
         }
 
@@ -361,6 +370,7 @@ void respondMouse(Task_Message* message) {
         if(64 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 96
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
             if(selectedIndex != -1) {
+                App_Syscall_DrawButton_Pushed(layerId, 32*2+1, 0+1, 32-2, 32-2, "Del");;
                 if(!App_Syscall_Confirm("Will you delete file?", sizeof("Will you delete file?"))) {
                     ascii buff[DefaultBuffSize];
                     getAbsPath(dirEntData.dirEntList[selectedIndex].name, path, buff);
@@ -368,7 +378,6 @@ void respondMouse(Task_Message* message) {
                         App_Syscall_Alert("Delete Failed", sizeof("Delete Failed"));
                     }
                     load();
-                    flush();
                 }
             }
         }
@@ -377,6 +386,7 @@ void respondMouse(Task_Message* message) {
         //ディレクトリ作成
         if(96 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 128
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            App_Syscall_DrawButton_Pushed(layerId, 32*3+1, 0+1, 32-2, 32-2, "");
             ascii buff[DefaultBuffSize] = "";
             if(!App_Syscall_Prompt("Input Directory Name", sizeof("Input Directory Name"), buff, DefaultBuffSize)) {
                 ascii dirAbsPath[DefaultBuffSize];
@@ -385,14 +395,16 @@ void respondMouse(Task_Message* message) {
                     App_Syscall_Alert("MkDir Failed", sizeof("MkDir Failed"));
                 }
                 load();
-                flush();
             }
+
+            flush();
         }
 
 
         //テキスト作成
         if(128 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 160
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+            App_Syscall_DrawButton_Pushed(layerId, 32*4+1, 0+1, 32-2, 32-2, "");
             ascii buff[DefaultBuffSize] = "";
             if(!App_Syscall_Prompt("Input File Name", sizeof("Input File Name"), buff, DefaultBuffSize)) {
                 ascii txtAbsPath[DefaultBuffSize];
@@ -402,24 +414,29 @@ void respondMouse(Task_Message* message) {
                     App_Syscall_Alert("MkTxt Failed", sizeof("MkTxt Failed"));
                 }
                 load();
-                flush();
             }
+
+            flush();
         }
 
 
         //upボタン
         if(32*5+16 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32*5+16+32
             && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 16) {
-            if(32 <= scroll) scroll -= 32;
-            else scroll = 0;
+            App_Syscall_DrawButton_Pushed(layerId, 32*5+16+1, 0+1, 32-2, 16-2, "up");
+            if(0 <= selectedIndex) {
+                selectedIndex --;
+            }
             flush();
         }
 
         //downボタン
         if(32*5+16 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32*5+16+32
             && 16 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
-            if(scroll < ((sintn)dirEntData.entryCount)*32 - (((sintn)(height)-64-16-32)/32)*32) scroll += 32;
-            else scroll = (dirEntData.entryCount)*32 - (((sintn)(height)-64-16-32)/32)*32;
+            App_Syscall_DrawButton_Pushed(layerId, 32*5+16+1, 16+1, 32-2, 16-2, "down");;
+            if(selectedIndex+1 < (sintn)dirEntData.entryCount) {
+                selectedIndex ++;
+            }
             flush();
         }
 
@@ -479,6 +496,8 @@ void flush(void) {
     Graphic_Color black = {0x00, 0x00, 0x00};
     Graphic_Color gray = {0x88, 0x88, 0x88};
     Graphic_Color blue = {0x55, 0x55, 0xff};
+    Graphic_Color shudow = {0x4f, 0x4f, 0x4f};
+    Graphic_Color light = {0xd0, 0xd0, 0xd0};
 
     Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
@@ -524,55 +543,53 @@ void flush(void) {
 
     //パスバー
     App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, white);
-    App_Syscall_DrawFont(layerId, 32+8, 32+10, 'p', black);
-    App_Syscall_DrawFont(layerId, 32+8+8, 32+10, 'a', black);
-    App_Syscall_DrawFont(layerId, 32+8+8*2, 32+10, 't', black);
-    App_Syscall_DrawFont(layerId, 32+8+8*3, 32+10, 'h', black);
-    App_Syscall_DrawFont(layerId, 32+8+8*4, 32+10, ':', black);
+    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 1, shudow);
+    App_Syscall_DrawSquare(layerId, 32+1, 32+32-2, width-32*2-2, 1, light);
+    App_Syscall_DrawSquare(layerId, 32+1, 32+1, 1, 32-2, shudow);
+    App_Syscall_DrawSquare(layerId, width-32-2, 32+1, 1, 32-2, light);
 
     if(path[0] == '\0') {
-        App_Syscall_DrawFont(layerId, 32+8*6, 32+10, '/', black);
+        App_Syscall_DrawFont(layerId, 32+8, 32+10, '/', black);
     }else {
         for(uintn i=0; i<DefaultBuffSize; i++) {
             if(path[i] == '\0') break;
-            App_Syscall_DrawFont(layerId, 32+8+8*(i+5), 32+10, path[i], black);
+            App_Syscall_DrawFont(layerId, 32+8*(i+1), 32+10, path[i], black);
         }
     }
 
     //戻るボタン
-    App_Syscall_DrawSquare(layerId, 0+1, 32+1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, 8, 32+10, '<', black);
-    App_Syscall_DrawFont(layerId, 8*2, 32+10, '-', black);
+    App_Syscall_DrawButton(layerId, 0+1, 32+1, 32-2, 32-2, "<-");
 
     //リロードボタン
-    App_Syscall_DrawSquare(layerId, width-32+0+1, 32+1, 32-2, 32-2, ui_color);
+    App_Syscall_DrawButton(layerId, width-32+0+1, 32+1, 32-2, 32-2, "");
     App_Syscall_DrawFont(layerId, width-32+8, 32+2, 'R', black);
     App_Syscall_DrawFont(layerId, width-32+8+8, 32+2, 'e', black);
     App_Syscall_DrawFont(layerId, width-32+0, 32+18, 'l', black);
     App_Syscall_DrawFont(layerId, width-32+8, 32+18, 'o', black);
     App_Syscall_DrawFont(layerId, width-32+8*2, 32+18, 'a', black);
     App_Syscall_DrawFont(layerId, width-32+8*3, 32+18, 'd', black);
+    if(selectedIndex != -1) {
+        //移動ボタン
+        App_Syscall_DrawButton(layerId, 0+1, 0+1, 32-2, 32-2, "Mov");
 
-    //移動ボタン
-    App_Syscall_DrawSquare(layerId, 1, 1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, 4, 10, 'M', black);
-    App_Syscall_DrawFont(layerId, 4+8, 10, 'o', black);
-    App_Syscall_DrawFont(layerId, 4+8*2, 10, 'v', black);
+        //コピーボタン
+        App_Syscall_DrawButton(layerId, 32+1, 0+1, 32-2, 32-2, "Cpy");
 
-    //コピーボタン
-    App_Syscall_DrawSquare(layerId, 32+1, 1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, 32+4, 10, 'C', black);
-    App_Syscall_DrawFont(layerId, 32+4+8, 10, 'p', black);
-    App_Syscall_DrawFont(layerId, 32+4+8*2, 10, 'y', black);
+        //削除ボタン
+        App_Syscall_DrawButton(layerId, 32*2+1, 0+1, 32-2, 32-2, "Del");
+    }else {
+        //移動ボタン
+        App_Syscall_DrawSquare_NotActive(layerId, 0+1, 0+1, 32-2, 32-2, "Mov");
 
-    //削除ボタン
-    App_Syscall_DrawSquare(layerId, 32*2+1, 1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, 32*2+4, 10, 'D', black);
-    App_Syscall_DrawFont(layerId, 32*2+4+8, 10, 'e', black);
-    App_Syscall_DrawFont(layerId, 32*2+4+8*2, 10, 'l', black);
+        //コピーボタン
+        App_Syscall_DrawSquare_NotActive(layerId, 32+1, 0+1, 32-2, 32-2, "Cpy");
+
+        //削除ボタン
+        App_Syscall_DrawSquare_NotActive(layerId, 32*2+1, 0+1, 32-2, 32-2, "Del");
+    }
 
     //ディレクトリ作成
-    App_Syscall_DrawSquare(layerId, 32*3+1, 1, 32-2, 32-2, ui_color);
+    App_Syscall_DrawButton(layerId, 32*3+1, 0+1, 32-2, 32-2, "");
     App_Syscall_DrawFont(layerId, 32*3+8, 0, 'M', black);
     App_Syscall_DrawFont(layerId, 32*3+16, 0, 'k', black);
     App_Syscall_DrawFont(layerId, 32*3+4, 16, 'D', black);
@@ -580,7 +597,7 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, 32*3+20, 16, 'r', black);
 
     //テキストファイル作成
-    App_Syscall_DrawSquare(layerId, 32*4+1, 1, 32-2, 32-2, ui_color);
+    App_Syscall_DrawButton(layerId, 32*4+1, 0+1, 32-2, 32-2, "");
     App_Syscall_DrawFont(layerId, 32*4+8, 0, 'M', black);
     App_Syscall_DrawFont(layerId, 32*4+16, 0, 'k', black);
     App_Syscall_DrawFont(layerId, 32*4+4, 16, 'T', black);
@@ -588,16 +605,10 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, 32*4+20, 16, 't', black);
 
     //上スクロールボタン
-    App_Syscall_DrawSquare(layerId, 32*5+16+1, 1, 32-2, 16-2, ui_color);
-    App_Syscall_DrawFont(layerId, 32*5+16+8, 0, 'u', black);
-    App_Syscall_DrawFont(layerId, 32*5+16+16, 0, 'p', black);
+    App_Syscall_DrawButton(layerId, 32*5+16+1, 0+1, 32-2, 16-2, "up");
 
     //下スクロールボタン
-    App_Syscall_DrawSquare(layerId, 32*5+16+1, 16+1, 32-2, 16-2, ui_color);
-    App_Syscall_DrawFont(layerId, 32*5+16, 16, 'd', black);
-    App_Syscall_DrawFont(layerId, 32*5+16+8, 16, 'o', black);
-    App_Syscall_DrawFont(layerId, 32*5+16+8*2, 16, 'w', black);
-    App_Syscall_DrawFont(layerId, 32*5+16+8*3, 16, 'n', black);
+    App_Syscall_DrawButton(layerId, 32*5+16+1, 16+1, 32-2, 16-2, "down");
 
     //OpenWith...
     App_Syscall_DrawFont(layerId, width-32*3, 0, 'O', black);
@@ -609,22 +620,33 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, width-32*3+8*2, 16, 't', black);
     App_Syscall_DrawFont(layerId, width-32*3+8*3, 16, 'h', black);
 
+    if(selectedIndex != -1) {
+        //実行ボタン
+        App_Syscall_DrawButton(layerId, width-32+1, 0+1, 32-2, 32-2, "Run");
 
-    //実行ボタン
-    App_Syscall_DrawSquare(layerId, width-32+1, 1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, width-32+4, 10, 'R', black);
-    App_Syscall_DrawFont(layerId, width-32+4+8, 10, 'u', black);
-    App_Syscall_DrawFont(layerId, width-32+4+8*2, 10, 'n', black);
+        //メモ帳で開くボタン
+        App_Syscall_DrawButton(layerId, width-32*2+1, 0+1, 32-2, 32-2, "");
+        App_Syscall_DrawFont(layerId, width-32*2, 0, 'N', black);
+        App_Syscall_DrawFont(layerId, width-32*2+8, 0, 'o', black);
+        App_Syscall_DrawFont(layerId, width-32*2+8*2, 0, 't', black);
+        App_Syscall_DrawFont(layerId, width-32*2+8*3, 0, 'e', black);
+        App_Syscall_DrawFont(layerId, width-32*2+4, 16, 'p', black);
+        App_Syscall_DrawFont(layerId, width-32*2+4+8, 16, 'a', black);
+        App_Syscall_DrawFont(layerId, width-32*2+4+8*2, 16, 'd', black);
+    }else {
+        //実行ボタン
+        App_Syscall_DrawSquare_NotActive(layerId, width-32+1, 0+1, 32-2, 32-2, "Run");
 
-    //メモ帳で開くボタン
-    App_Syscall_DrawSquare(layerId, width-32*2+1, 1, 32-2, 32-2, ui_color);
-    App_Syscall_DrawFont(layerId, width-32*2, 0, 'N', black);
-    App_Syscall_DrawFont(layerId, width-32*2+8, 0, 'o', black);
-    App_Syscall_DrawFont(layerId, width-32*2+8*2, 0, 't', black);
-    App_Syscall_DrawFont(layerId, width-32*2+8*3, 0, 'e', black);
-    App_Syscall_DrawFont(layerId, width-32*2+4, 16, 'p', black);
-    App_Syscall_DrawFont(layerId, width-32*2+4+8, 16, 'a', black);
-    App_Syscall_DrawFont(layerId, width-32*2+4+8*2, 16, 'd', black);
+        //メモ帳で開くボタン
+        App_Syscall_DrawSquare_NotActive(layerId, width-32*2+1, 0+1, 32-2, 32-2, "");
+        App_Syscall_DrawFont(layerId, width-32*2, 0, 'N', gray);
+        App_Syscall_DrawFont(layerId, width-32*2+8, 0, 'o', gray);
+        App_Syscall_DrawFont(layerId, width-32*2+8*2, 0, 't', gray);
+        App_Syscall_DrawFont(layerId, width-32*2+8*3, 0, 'e', gray);
+        App_Syscall_DrawFont(layerId, width-32*2+4, 16, 'p', gray);
+        App_Syscall_DrawFont(layerId, width-32*2+4+8, 16, 'a', gray);
+        App_Syscall_DrawFont(layerId, width-32*2+4+8*2, 16, 'd', gray);
+    }
 
 
     //ディレクトリを表示

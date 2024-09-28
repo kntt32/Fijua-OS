@@ -76,4 +76,14 @@ sintn App_Syscall_Prompt(const ascii question[], uintn questionLength, out ascii
 
 sintn App_Syscall_TextBox(uintn layerId, uintn x, uintn y, App_Syscall_TextBox_Data* data);
 
+sintn App_Syscall_SetClipBoard(const ascii* str, uintn length);
+
+sintn App_Syscall_GetClipBoard(out ascii* buff, in out uintn* buffsize);
+
+sintn App_Syscall_DrawButton(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
+
+sintn App_Syscall_DrawButton_Pushed(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
+
+sintn App_Syscall_DrawSquare_NotActive(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
+
 #endif

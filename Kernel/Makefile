@@ -18,7 +18,7 @@ else
 	rm elfloader.c app_x64.s
 endif
 
-a.elf: main.o font.o bootwrapper.o x64.o console.o timer.o functions.o queue.o memory.o graphic.o task.o  test.o layer.o mouse.o keyboard.o syscall.o message.o terminal.o shell.o app_x64.o file.o taskbar.o elfloader.o
+a.elf: main.o font.o bootwrapper.o x64.o console.o timer.o functions.o queue.o memory.o graphic.o task.o  test.o layer.o mouse.o keyboard.o syscall.o message.o terminal.o shell.o app_x64.o file.o taskbar.o elfloader.o clipboard.o
 	ld.lld --entry entrypoint -z norelro --static --image-base 0x200000 -o a.elf $^
 ifeq ($(OS), Windows_NT)
 	copy a.elf ..\disk\kernel.elf
@@ -40,10 +40,11 @@ graphic.o: graphic.c graphic.h graphic_mouse_bitmap
 task.o: task.c queue.h task.h memory.h x64.h graphic.h layer.h message.h console.h
 layer.o: layer.c memory.h graphic.h layer.h mouse.h queue.h task.h font.h message.h
 mouse.o: mouse.c mouse.h graphic.h layer.h functions.h console.h x64.h
-syscall.o: syscall.c syscall.h queue.h task.h x64.h console.h layer.h graphic.h font.h message.h functions.h file.h memory.h terminal.h
+syscall.o: syscall.c syscall.h queue.h task.h x64.h console.h layer.h graphic.h font.h message.h functions.h file.h memory.h terminal.h clipboard.h
 message.o: message.c queue.h message.h task.h functions.h
 file.o: file.c file.h console.h x64.h functions.h
 taskbar.o: taskbar.c taskbar.h graphic.h queue.h task.h terminal.h file.h layer.h x64.h console.h functions.h
+clipboard.o: clipboard.c clipboard.h memory.h
 
 terminal.o: terminal.c graphic.h queue.h task.h terminal.h file.h
 shell.o: shell.c graphic.h queue.h task.h shell.h file.h

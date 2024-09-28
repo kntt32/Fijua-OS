@@ -15,6 +15,7 @@
 #include "functions.h"
 #include "file.h"
 #include "memory.h"
+#include "clipboard.h"
 
 #include "terminal.h"
 
@@ -23,6 +24,14 @@
 #define Syscall_SyscallAddr ((void**)0x100000)
 
 extern KernelInputStruct* KernelInput;
+
+static Graphic_Color white = {0xff, 0xff, 0xff};
+static Graphic_Color black = {0x00, 0x00, 0x00};
+static Graphic_Color gray = {0x88, 0x88, 0x88};
+static Graphic_Color blue = {0x55, 0x55, 0xff};
+static Graphic_Color shudow = {0x4f, 0x4f, 0x4f};
+static Graphic_Color light = {0xd0, 0xd0, 0xd0};
+static Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
 sintn Syscall_AppEnter();
 
@@ -665,14 +674,22 @@ sintn Syscall_EditBox(uintn layerId, uintn x, uintn y, uintn height, out ascii b
     Graphic_Color black = {0x00, 0x00, 0x00};
     Graphic_Color backcolor = {0xff, 0xff, 0xff};
 
+    Graphic_Color shudow = {0x2f, 0x2f, 0x2f};
+    Graphic_Color light = {0xd0, 0xd0, 0xd0};
+
     Task_Message message;
     while(1) {
         Syscall_DrawSquare(layerId, x, y, width, height, backcolor);
+        Syscall_DrawSquare(layerId, x, y, width, 1, shudow);
+        Syscall_DrawSquare(layerId, x, y+height-1, width, 1, light);
+        Syscall_DrawSquare(layerId, x, y, 1, height, shudow);
+        Syscall_DrawSquare(layerId, x+width-1, y, 1, height, shudow);
+        
         for(uintn i=0; i<buffSize; i++) {
             if(buff[i] == '\0') break;
-            Syscall_DrawFont(layerId, x+8*i, y+height/2-6, buff[i], black);
+            Syscall_DrawFont(layerId, x+8*(i+1), y+height/2-6, buff[i], black);
         }
-        Syscall_DrawSquare(layerId, x+8*cursorX, y+height/2+8, 8, 2, black);
+        Syscall_DrawSquare(layerId, x+8*(cursorX+1), y+height/2+8, 8, 2, black);
 
         Syscall_ReadMessage(&message);
         switch(message.type) {
@@ -1051,6 +1068,107 @@ sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, App_Syscall_TextBox_Data*
         }
     }
 
+    return 0;
+}
+
+
+sintn Syscall_SetClipBoard(const ascii* str, uintn length) {
+    if(Clip_Set(str, length)) {
+        return 1;
+    }
+
+    return 0;
+}
+
+
+sintn Syscall_GetClipBoard(out ascii* buff, in out uintn* buffsize) {
+    if(Clip_Get(buff, buffsize)) {
+        return 1;
+    }
+
+    return 0;
+}
+
+
+typedef enum {
+    Syscall_DrawButton_State_Pushed,
+    Syscall_DrawButton_State_Normal,
+    Syscall_DrawButton_State_NotActive
+} Syscall_DrawButton_State;
+
+static void Syscall_DrawButton_(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str, Syscall_DrawButton_State state) {
+    Syscall_DrawSquare(layerId, x, y, width, height, ui_color);
+
+    uintn str_length = 0;
+    for(str_length = 0; 1; str_length++) {
+        if(str[str_length] == '\0') break;
+    }
+
+    switch(state) {
+        case Syscall_DrawButton_State_Pushed:
+            Syscall_DrawSquare(layerId, x, y, width, 1, shudow);
+            Syscall_DrawSquare(layerId, x, y+height-1, width, 1, light);
+            Syscall_DrawSquare(layerId, x, y, 1, height, shudow);
+            Syscall_DrawSquare(layerId, x+width-1, y, 1, height, light);
+            for(uintn i=0; i<str_length; i++) {
+                Syscall_DrawFont(layerId, x+width/2-str_length*8/2+8*i+1, y+height/2-6+1, str[i], black);
+            }
+            break;
+        case Syscall_DrawButton_State_Normal:
+            Syscall_DrawSquare(layerId, x, y, width, 1, light);
+            Syscall_DrawSquare(layerId, x, y+height-1, width, 1, shudow);
+            Syscall_DrawSquare(layerId, x, y, 1, height, light);
+            Syscall_DrawSquare(layerId, x+width-1, y, 1, height, shudow);
+            for(uintn i=0; i<str_length; i++) {
+                Syscall_DrawFont(layerId, x+width/2-str_length*8/2+8*i, y+height/2-6, str[i], black);
+            }
+            break;
+        case Syscall_DrawButton_State_NotActive:
+            Syscall_DrawSquare(layerId, x, y, width, 1, gray);
+            Syscall_DrawSquare(layerId, x, y+height-1, width, 1, gray);
+            Syscall_DrawSquare(layerId, x, y, 1, height, gray);
+            Syscall_DrawSquare(layerId, x+width-1, y, 1, height, gray);
+            for(uintn i=0; i<str_length; i++) {
+                Syscall_DrawFont(layerId, x+width/2-str_length*8/2+8*i, y+height/2-6, str[i], gray);
+            }
+            break;
+    }
+
+    return;    
+}
+
+sintn Syscall_DrawButton(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str) {
+    Syscall_DrawButton_(layerId, x, y, width, height, str, Syscall_DrawButton_State_Normal);
+
+    return 0;
+}
+
+sintn Syscall_DrawButton_Pushed(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str) {
+    Syscall_DrawButton_(layerId, x, y, width, height, str, Syscall_DrawButton_State_Pushed);
+
+    Task_Message message;
+    while(1) {
+        Syscall_ReadMessage(&message);
+        switch(message.type) {
+            case Task_Message_Quit:
+                Layer_Window_Delete(layerId);
+                Message_EnQueue(Task_GetRunningTaskId(), &message);
+                return -1;
+            case Task_Message_MouseLayerEvent:
+                if(message.data.MouseLayerEvent.leftButton == 0) {
+                    Syscall_DrawButton_(layerId, x, y, width, height, str, Syscall_DrawButton_State_Normal);
+                    return 0;
+                }
+            default:
+                break;
+        }
+    }
+
+    return -2;
+}
+
+sintn Syscall_DrawSquare_NotActive(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str) {
+    Syscall_DrawButton_(layerId, x, y, width, height, str, Syscall_DrawButton_State_NotActive);
     return 0;
 }
 

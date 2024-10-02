@@ -1,4 +1,5 @@
 # Fijua-OS
+(画像準備中)
 ## 概要
 Fijua-OSはどこでも動くx64GUIマルチタスクOSである  
 ブートローダーのFijua-Boot、カーネルのFijua-Kernelから構成され、GUIウインドウシステムを搭載し、Clangの生成する位置独立なELF形式のアプリケーションを起動できる。  

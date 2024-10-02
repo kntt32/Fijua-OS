@@ -463,11 +463,12 @@ void respondMouse(Task_Message* message) {
                         }else if(movAndCopyFile_R(absPath, dest, 3, 1)) {
                             App_Syscall_Alert("Error", sizeof("Error"));
                         }
+                        load();
                     }
 
                     //ファイルコピー
                     if(width-32*4-16+1 <= mouseX && mouseX < width-32*4-16+1+30) {
-                        App_Syscall_DrawButton_Pushed(layerId, width-32*4-16+1, 64+16+i*32-scroll+1, 30, 30, "Mov");
+                        App_Syscall_DrawButton_Pushed(layerId, width-32*4-16+1, 64+16+i*32-scroll+1, 30, 30, "Cpy");
                         ascii absPath[DefaultBuffSize];
                         ascii dest_rel[DefaultBuffSize] = "";
                         ascii dest[DefaultBuffSize] = "";
@@ -481,6 +482,7 @@ void respondMouse(Task_Message* message) {
                         }else if(movAndCopyFile_R(absPath, dest, 3, 0)) {
                             App_Syscall_Alert("Error", sizeof("Error"));
                         }
+                        load();
                     }
                     
                     if(dirEntData.dirEntList[i].type == File_Directory) {

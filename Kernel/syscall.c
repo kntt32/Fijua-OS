@@ -1173,14 +1173,56 @@ sintn Syscall_DrawButton_NotActive(uintn layerId, uintn x, uintn y, uintn width,
 }
 
 sintn Syscall_DrawScrollBar(uintn layerId, uintn x, uintn y, uintn height, uintn offset, uintn page_height) {
-    Syscall_DrawSquare(layerId, x, y, 16, height, ui_color);
-    Syscall_DrawSquare(layerId, x, y, 1, height, light);
-    Syscall_DrawSquare(layerId, x+16-1, y, 1, height, shudow);
-    Syscall_DrawSquare(layerId, x, y, 16, 1, light);
-    Syscall_DrawSquare(layerId, x, y+height-1, 16, 1, shudow);
+    static uint16 uplogo[] = {
+#include "uplogo_bitmap"
+    };
 
-    //Syscall_DrawSquare(layerId, x, y, 16, 16, )
+    static uint16 downlogo[] = {
+#include "downlogo_bitmap"
+    };
+
+    Syscall_DrawSquare(layerId, x, y, 16, height, gray);
+    Syscall_DrawSquare(layerId, x, y, 1, height, shudow);
+    Syscall_DrawSquare(layerId, x+16-1, y, 1, height, light);
+    Syscall_DrawSquare(layerId, x, y, 16, 1, shudow);
+    Syscall_DrawSquare(layerId, x, y+height-1, 16, 1, light);
+
+    uintn drawX = x+1;
+    uintn drawY = y+16;
+    uintn drawHeight = height - 32;
+    if(height < page_height) {
+        drawY = y+16+offset*(height-32)/(page_height - height);
+        drawHeight = (height-32)*height/page_height;
+    }
+    Syscall_DrawSquare(layerId, drawX, drawY, 14, drawHeight, ui_color);
+    Syscall_DrawSquare(layerId, drawX, drawY, 1, drawHeight, light);
+    Syscall_DrawSquare(layerId, drawX+14-1, drawY, 1, drawHeight, shudow);
+    Syscall_DrawSquare(layerId, drawX, drawY, 14, 1, light);
+    Syscall_DrawSquare(layerId, drawX, drawY+drawHeight-1, 14, 1, shudow);
+
+    Syscall_DrawButton(layerId, x+1, y+1, 14, 14, "");
+    for(uintn iy=0; iy<16; iy++) {
+        uint16 bitmap_line = uplogo[iy];
+        for(uintn ix=0; ix<16; ix++) {
+            if(bitmap_line & (0x8000 >> ix)) {
+                Syscall_DrawSquare(layerId, x+ix, y+iy, 1, 1, black);
+            }
+        }
+    }
+    Syscall_DrawButton(layerId, x+1, y+height-15, 14, 14, "");
+    for(uintn iy=0; iy<16; iy++) {
+        uint16 bitmap_line = downlogo[iy];
+        for(uintn ix=0; ix<16; ix++) {
+            if(bitmap_line & (0x8000 >> ix)) {
+                Syscall_DrawSquare(layerId, x+ix, y+iy+height-16, 1, 1, black);
+            }
+        }
+    }
 
     return 0;
+}
+
+sintn Syscall_DrawScrollBar_Response() {
+    return -1;
 }
 

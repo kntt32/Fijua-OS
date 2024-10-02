@@ -53,7 +53,7 @@ EDK2のOVMFをファームウェアとして使用する。
 
 成功すれば、`/Build/OvmfX64/(環境によって異なる)/FV/OVMF.fd`に生成物が保存される
 
-QEMUはパスを通し、`disk`ディレクトリのあるディレクトリで、次のようにして実行する  
-> qemu-system-x86_64 --monitor stdio -usb -device usb-mouse -device usb-kbd -bios $(OVMFFDPATH) -hda fat:rw:disk
+QEMUはパスを通し、起動ディスクを指定した上で、以下のようなオプションを追加して起動する。$(OVMFFDPATH)にはOVMF.fdのパスを入れる。  
+> --monitor stdio -usb -device usb-mouse -device usb-kbd -bios $(OVMFFDPATH)
 
 または`tool`ディレクトリを作り、それ以下にOVMF.fdを配置し、`make run`と実行することでもできる

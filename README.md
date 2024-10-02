@@ -31,28 +31,36 @@ CSMモードは無効にしておく
 EDK2のOVMFをファームウェアとして使用する。
 デフォルトではEFI_SIMPLE_POINTER_PROTOCOL（マウス入力を取得する機能）が使用できないため、マウスが使用できない。そのため、[Githubリポジトリ](https://github.com/kntt32/Fijua-OS)にあるOVMFを使うか、この機能を有効にした上でビルドすなおす必要がある。ビルドする場合は、次のような手順を踏む。  
 1. EDK2を入手し、[EDK2のWiki](https://github.com/tianocore/tianocore.github.io/wiki/Getting-Started-with-EDK-II)などを参考にEDK2本体をビルドする
-2. `OvmfPkg/OvmfPkgX64.fdf`に太字部分を書き加える  
-> INF MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf  
-> INF MdeModulePkg/Bus/Pci/EhciDxe/EhciDxe.inf  
-> INF MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf  
-> INF MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf  
-> INF MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf  
-> **INF MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf**  
-> INF MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf  
+2. `OvmfPkg/OvmfPkgX64.fdf`に"" ~ ""の部分を書き加える
+```
+INF MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf
+INF MdeModulePkg/Bus/Pci/EhciDxe/EhciDxe.inf
+INF MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf
+INF MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
+INF MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
+"" INF MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf ""
+INF MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
+```
 
-3. `OvmfPkg/OvmfPkgX64.dsc`に太字部分を書き加える
->   MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf  
->   MdeModulePkg/Bus/Pci/EhciDxe/EhciDxe.inf  
->   MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf  
->   MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf  
->   MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf  
-> 	**MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf**  
->   MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf  
+3. `OvmfPkg/OvmfPkgX64.dsc`に"" ~ ""の部分を書き加える
+```
+MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf
+MdeModulePkg/Bus/Pci/EhciDxe/EhciDxe.inf
+MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf
+MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
+MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
+"" MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf ""
+MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
+```
 
-4. OvmfPkgディレクトリに移動し、次のコマンドを実行する
-> ./build.sh -a X64 -p OvmfPkgX64.dsc
+5. OvmfPkgディレクトリに移動し、次のコマンドを実行する
+```
+./build.sh -a X64 -p OvmfPkgX64.dsc
+```
 
 成功すれば、`/Build/OvmfX64/(環境によって異なる)/FV/OVMF.fd`に生成物が保存される
 
 QEMUはパスを通し、起動ディスクを指定した上で、以下のようなオプションを追加して起動する。$(OVMFFDPATH)にはOVMF.fdのパスを入れる。  
-> --monitor stdio -usb -device usb-mouse -device usb-kbd -bios $(OVMFFDPATH)
+```
+--monitor stdio -usb -device usb-mouse -device usb-kbd -bios $(OVMFFDPATH)
+```

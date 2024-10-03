@@ -33,6 +33,14 @@ static Graphic_Color shudow = {0x4f, 0x4f, 0x4f};
 static Graphic_Color light = {0xd0, 0xd0, 0xd0};
 static Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
+static uint16 uplogo[] = {
+#include "uplogo_bitmap"
+};
+
+static uint16 downlogo[] = {
+#include "downlogo_bitmap"
+};
+
 sintn Syscall_AppEnter();
 
 void Syscall_Init(void) {
@@ -1151,9 +1159,11 @@ sintn Syscall_DrawButton_Pushed(uintn layerId, uintn x, uintn y, uintn width, ui
         Syscall_ReadMessage(&message);
         switch(message.type) {
             case Task_Message_Quit:
-                Layer_Window_Delete(layerId);
                 Message_EnQueue(Task_GetRunningTaskId(), &message);
                 return -1;
+            case Task_Message_CloseWindow:
+                Message_EnQueue(Task_GetRunningTaskId(), &message);
+                return 0;
             case Task_Message_MouseLayerEvent:
                 if(message.data.MouseLayerEvent.leftButton == 0) {
                     Syscall_DrawButton_(layerId, x, y, width, height, str, Syscall_DrawButton_State_Normal);
@@ -1172,14 +1182,38 @@ sintn Syscall_DrawButton_NotActive(uintn layerId, uintn x, uintn y, uintn width,
     return 0;
 }
 
-sintn Syscall_DrawScrollBar(uintn layerId, uintn x, uintn y, uintn height, uintn offset, uintn page_height) {
-    static uint16 uplogo[] = {
-#include "uplogo_bitmap"
-    };
+inline static void Syscall_DrawScrollBar_UpLogo(uintn layerId, uintn x, uintn y) {
+    for(uintn iy=0; iy<16; iy++) {
+        uint16 bitmap_line = uplogo[iy];
+        for(uintn ix=0; ix<16; ix++) {
+            if(bitmap_line & (0x8000 >> ix)) {
+                Syscall_DrawSquare(layerId, x+ix, y+iy, 1, 1, black);
+            }
+        }
+    }
 
-    static uint16 downlogo[] = {
-#include "downlogo_bitmap"
-    };
+    return;
+}
+
+inline static void Syscall_DrawScrollBar_DownLogo(uintn layerId, uintn x, uintn y) {
+    for(uintn iy=0; iy<16; iy++) {
+        uint16 bitmap_line = downlogo[iy];
+        for(uintn ix=0; ix<16; ix++) {
+            if(bitmap_line & (0x8000 >> ix)) {
+                Syscall_DrawSquare(layerId, x+ix, y+iy, 1, 1, black);
+            }
+        }
+    }
+
+    return;
+}
+
+sintn Syscall_DrawScrollBar(uintn layerId, App_Syscall_Scrollbar_Data* data) {
+    uintn x = data->x;
+    uintn y = data->y;
+    uintn height = data->height;
+    uintn offset = data->offset;
+    uintn page_height = data->page_height;
 
     Syscall_DrawSquare(layerId, x, y, 16, height, gray);
     Syscall_DrawSquare(layerId, x, y, 1, height, shudow);
@@ -1191,8 +1225,8 @@ sintn Syscall_DrawScrollBar(uintn layerId, uintn x, uintn y, uintn height, uintn
     uintn drawY = y+16;
     uintn drawHeight = height - 32;
     if(height < page_height) {
-        drawY = y+16+offset*(height-32)/(page_height - height);
         drawHeight = (height-32)*height/page_height;
+        drawY = y+16+offset*(height-32-drawHeight)/(page_height - height);
     }
     Syscall_DrawSquare(layerId, drawX, drawY, 14, drawHeight, ui_color);
     Syscall_DrawSquare(layerId, drawX, drawY, 1, drawHeight, light);
@@ -1201,28 +1235,92 @@ sintn Syscall_DrawScrollBar(uintn layerId, uintn x, uintn y, uintn height, uintn
     Syscall_DrawSquare(layerId, drawX, drawY+drawHeight-1, 14, 1, shudow);
 
     Syscall_DrawButton(layerId, x+1, y+1, 14, 14, "");
-    for(uintn iy=0; iy<16; iy++) {
-        uint16 bitmap_line = uplogo[iy];
-        for(uintn ix=0; ix<16; ix++) {
-            if(bitmap_line & (0x8000 >> ix)) {
-                Syscall_DrawSquare(layerId, x+ix, y+iy, 1, 1, black);
-            }
-        }
-    }
-    Syscall_DrawButton(layerId, x+1, y+height-15, 14, 14, "");
-    for(uintn iy=0; iy<16; iy++) {
-        uint16 bitmap_line = downlogo[iy];
-        for(uintn ix=0; ix<16; ix++) {
-            if(bitmap_line & (0x8000 >> ix)) {
-                Syscall_DrawSquare(layerId, x+ix, y+iy+height-16, 1, 1, black);
-            }
-        }
-    }
+    Syscall_DrawScrollBar_UpLogo(layerId, x, y);
 
+    Syscall_DrawButton(layerId, x+1, y+height-15, 14, 14, "");
+    Syscall_DrawScrollBar_DownLogo(layerId, x, y+height-16);
+    
     return 0;
 }
 
-sintn Syscall_DrawScrollBar_Response() {
-    return -1;
+sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* data, uintn mouseX, uintn mouseY) {
+    uintn x = data->x;
+    uintn y = data->y;
+    uintn height = data->height;
+    uintn offset = data->offset;
+    uintn page_height = data->page_height;
+
+    if(x <= mouseX && mouseX < x+16 && y <= mouseY && mouseY < y+height) {
+        //up
+        if(mouseY < y+16) {
+            Syscall_DrawButton_Pushed(layerId, x+1, y+1, 14, 14, "");
+
+            if(data->offset < 16) {
+                data->offset = 0;
+            }else {
+                data->offset -= 16;
+            }
+        }
+        //down
+        if(y+height-16 <= mouseY) {
+            Syscall_DrawButton_Pushed(layerId, x+1, y+height-15, 14, 14, "");
+
+            if(height <= page_height) {
+                data->offset += 16;
+                if(page_height-height <= data->offset) {
+                    data->offset = page_height-height;
+                }
+            }
+        }
+        //バーのドラッグ
+        if(y+16 <= mouseY && mouseY < y+height-16) {
+            Task_Message message;
+            while(1) {
+                Syscall_ReadMessage(&message);
+
+                switch(message.type) {
+                    case Task_Message_Quit:
+                        Message_EnQueue(Task_GetRunningTaskId(), &message);
+                        return -1;
+                    case Task_Message_CloseWindow:
+                        Message_EnQueue(Task_GetRunningTaskId(), &message);
+                        return 0;
+                    case Task_Message_MouseLayerEvent:;
+                        uintn drawHeight = height - 32;
+    if(height < page_height) {
+        drawHeight = (height-32)*height/page_height;
+    }
+                        sintn scroll = ((sintn)message.data.MouseLayerEvent.y - (sintn)mouseY)*(sintn)(page_height - height)/(sintn)(height-32-drawHeight);
+                        if(scroll < 0) {
+                            if(data->offset < (uintn)(-scroll)) {
+                                data->offset = 0;
+                            }else {
+                                data->offset += scroll;
+                            }
+                        }else {
+                            if(height <= page_height) {
+                                data->offset += scroll;
+                                if(page_height-height <= data->offset) {
+                                    data->offset = page_height-height;
+                                }
+                            }
+                        }
+                        mouseX = message.data.MouseLayerEvent.x;
+                        mouseY = message.data.MouseLayerEvent.y;
+                        Syscall_DrawScrollBar(layerId, data);
+                        if(!message.data.MouseLayerEvent.leftButton) {
+                            return 0;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }else {
+        return -1;
+    }
+
+    return 0;
 }
 

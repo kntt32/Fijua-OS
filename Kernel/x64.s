@@ -258,6 +258,9 @@ Syscall_AppEnter:#16バイトアライメントの必要なし
     cmp $36, %rax
     je Syscall_AppEnter_Syscall_DrawScrollBar
 
+    cmp $37, %rax
+    je Syscall_AppEnter_Syscall_DrawScrollBar_Response
+
     #無効なシステムコール番号
     mov $-1, %rax
     jmp Syscall_AppEnter_Exit
@@ -408,6 +411,10 @@ Syscall_AppEnter_Syscall_DrawButton_NotActive:
 
 Syscall_AppEnter_Syscall_DrawScrollBar:
     call Syscall_DrawScrollBar
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_DrawScrollBar_Response:
+    call Syscall_DrawScrollBar_Response
     jmp Syscall_AppEnter_Exit
 
 Syscall_AppEnter_Exit:

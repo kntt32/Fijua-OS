@@ -10,12 +10,13 @@
 
 #define DefaultBuffSize (128)
 
-uintn width = 400;
-uintn height = 300;
+const uintn width = 400;
+const uintn height = 300;
 uintn layerId;
 ascii path[DefaultBuffSize] = "";
 
-sintn scroll = 0;
+App_Syscall_Scrollbar_Data scroll = {width-16, 64+16, height-64-16, 0, height-64-16};
+
 struct {
     uintn isExist;
     uintn pages;
@@ -230,9 +231,9 @@ void respondKeyboard(Task_Message* message) {
             case EFI_SIMPLE_INPUT_SCANCODE_UPARROW:
                 if(0 < selectedIndex) selectedIndex --;
                 if(selectedIndex < ((sintn)(height)-64-16-32)/32) {
-                    scroll = 0;
+                    scroll.offset = 0;
                 }else {
-                    scroll = (selectedIndex)*32 - (((sintn)(height)-64-16-32)/32)*32;
+                    scroll.offset = (selectedIndex)*32 - (((sintn)(height)-64-16-32)/32)*32;
                 }
                 break;
             case EFI_SIMPLE_INPUT_SCANCODE_DOWNARROW:
@@ -242,9 +243,9 @@ void respondKeyboard(Task_Message* message) {
                 }
                 if(selectedIndex+1 < (sintn)dirEntData.entryCount) selectedIndex ++;
                 if(selectedIndex < ((sintn)(height)-64-16-32)/32) {
-                    scroll = 0;
+                    scroll.offset = 0;
                 }else {
-                    scroll = (selectedIndex)*32 - (((sintn)(height)-64-16-32)/32)*32;
+                    scroll.offset = (selectedIndex)*32 - (((sintn)(height)-64-16-32)/32)*32;
                 }
                 break;
             default:
@@ -425,17 +426,24 @@ void respondMouse(Task_Message* message) {
             flush();
         }
 
+        //スクロールバー
+        if((sintn)(width-16) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width
+            && (sintn)(64+16) <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < (sintn)height) {
+            App_Syscall_DrawScrollBar_Response(layerId, &scroll, message->data.MouseLayerEvent.x, message->data.MouseLayerEvent.y);
+            flush();
+        }
+
         //ファイルリストに対しての操作
         if(64 <= message->data.MouseLayerEvent.y && (sintn)message->data.MouseLayerEvent.x < (sintn)(width-16)) {
             for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
-                if(64+16+i*32-scroll <= (sintn)message->data.MouseLayerEvent.y && (sintn)message->data.MouseLayerEvent.y < 64+16+32+i*32-scroll) {
+                if((sintn)(64+16+i*32-scroll.offset) <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < (sintn)(64+16+32+i*32-scroll.offset)) {
                     selectedIndex = i;
                     
                     uintn mouseX = message->data.MouseLayerEvent.x;
 
                     //ファイル削除
                     if(width-32*2-16+1 <= mouseX && mouseX < width-32*2-16+1+30) {
-                        App_Syscall_DrawButton_Pushed(layerId, width-32*2-16+1, 64+16+i*32-scroll+1, 30, 30, "Del");
+                        App_Syscall_DrawButton_Pushed(layerId, width-32*2-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Del");
 
                         if(!App_Syscall_Confirm("Will you delete file?", sizeof("Will you delete file?"))) {
                             ascii buff[DefaultBuffSize];
@@ -449,7 +457,7 @@ void respondMouse(Task_Message* message) {
 
                     //ファイル移動
                     if(width-32*3-16+1 <= mouseX && mouseX < width-32*3-16+1+30) {
-                        App_Syscall_DrawButton_Pushed(layerId, width-32*3-16+1, 64+16+i*32-scroll+1, 30, 30, "Mov");
+                        App_Syscall_DrawButton_Pushed(layerId, width-32*3-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Mov");
                         ascii absPath[DefaultBuffSize];
                         ascii dest_rel[DefaultBuffSize] = "";
                         ascii dest[DefaultBuffSize] = "";
@@ -468,7 +476,7 @@ void respondMouse(Task_Message* message) {
 
                     //ファイルコピー
                     if(width-32*4-16+1 <= mouseX && mouseX < width-32*4-16+1+30) {
-                        App_Syscall_DrawButton_Pushed(layerId, width-32*4-16+1, 64+16+i*32-scroll+1, 30, 30, "Cpy");
+                        App_Syscall_DrawButton_Pushed(layerId, width-32*4-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Cpy");
                         ascii absPath[DefaultBuffSize];
                         ascii dest_rel[DefaultBuffSize] = "";
                         ascii dest[DefaultBuffSize] = "";
@@ -488,7 +496,7 @@ void respondMouse(Task_Message* message) {
                     if(dirEntData.dirEntList[i].type == File_Directory) {
                         //ディレクトリを開く
                         if((sintn)width - 32-16 <= message->data.MouseLayerEvent.x) {
-                            App_Syscall_DrawButton_Pushed(layerId, width-32-16+1, 64+16+i*32-scroll+1, 30, 30, ">");
+                            App_Syscall_DrawButton_Pushed(layerId, width-32-16+1, 64+16+i*32-scroll.offset+1, 30, 30, ">");
 
                             ascii absPath[DefaultBuffSize];
                             if(getAbsPath(
@@ -508,7 +516,7 @@ void respondMouse(Task_Message* message) {
 
                         //ファイル開く
                         if(width-32-16+1 <= mouseX && mouseX < width-32-16+1+30) {
-                            App_Syscall_DrawButton_Pushed(layerId, width-32-16+1, 64+16+i*32-scroll+1, 30, 30, "Open");
+                            App_Syscall_DrawButton_Pushed(layerId, width-32-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Open");
                             ascii absPath[DefaultBuffSize];
                             if(getAbsPath(dirEntData.dirEntList[i].name, path, absPath)) {
                                 App_Syscall_Alert("Error", sizeof("Error"));
@@ -518,9 +526,9 @@ void respondMouse(Task_Message* message) {
                             }
                         }
 
-                        //ファイル実行(layerId, width-32*5-16+1, 64+16+i*32-scroll+1, 30, 30, "Run");
+                        //ファイル実行
                         if(width-32*5-16+1 <= mouseX && mouseX < width-32*5-16+1+30) {
-                            App_Syscall_DrawButton_Pushed(layerId, width-32*5-16+1, 64+16+i*32-scroll+1, 30, 30, "Run");
+                            App_Syscall_DrawButton_Pushed(layerId, width-32*5-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Run");
                             ascii absPath[DefaultBuffSize];
                             if(getAbsPath(dirEntData.dirEntList[i].name, path, absPath)) {
                                 App_Syscall_Alert("Error", sizeof("Error"));
@@ -560,7 +568,8 @@ void load(void) {
     }
 
     selectedIndex = -1;
-    scroll = 0;
+    scroll.offset = 0;
+    scroll.page_height = dirEntData.entryCount*32;
 
     return;
 }
@@ -576,33 +585,35 @@ void flush(void) {
 
     Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
-    App_Syscall_DrawSquare(layerId, 0, 0, width, height, white);
+    App_Syscall_DrawSquare(layerId, 0, 64+16, width, height, white);
 
     if(dirEntData.isExist) {
         for(sintn i=0; i<(sintn)dirEntData.entryCount; i++) {
-            if(i == selectedIndex && 64 <= 64+16+i*32-scroll) {
-                App_Syscall_DrawSquare(layerId, 0, 64+16+i*32-scroll, width, 32, blue);
-            }
+            if(!((sintn)64+16+i*32-(sintn)scroll.offset+32 < (sintn)(64+16))) {
+                if(i == selectedIndex && 64 <= 64+16+i*32-scroll.offset) {
+                    App_Syscall_DrawSquare(layerId, 0, 64+16+i*32-scroll.offset, width, 32, blue);
+                }
 
-            for(uintn k=0; k<32; k++) {
-                if(dirEntData.dirEntList[i].name[k] == '\0') break;
-                App_Syscall_DrawFont(layerId, 4+k*8, 64+16+10+i*32-scroll, dirEntData.dirEntList[i].name[k], black);
-            }
+                for(uintn k=0; k<32; k++) {
+                    if(dirEntData.dirEntList[i].name[k] == '\0') break;
+                    App_Syscall_DrawFont(layerId, 4+k*8, 64+16+10+i*32-scroll.offset, dirEntData.dirEntList[i].name[k], black);
+                }
 
-            if(dirEntData.dirEntList[i].type == File_Directory) {
-                App_Syscall_DrawButton(layerId, width-32-16+1, 64+16+i*32-scroll+1, 30, 30, ">");
-                App_Syscall_DrawButton(layerId, width-32*2-16+1, 64+16+i*32-scroll+1, 30, 30, "Del");
-                App_Syscall_DrawButton(layerId, width-32*3-16+1, 64+16+i*32-scroll+1, 30, 30, "Mov");
-                App_Syscall_DrawButton(layerId, width-32*4-16+1, 64+16+i*32-scroll+1, 30, 30, "Cpy");
-            }else {
-                App_Syscall_DrawButton(layerId, width-32-16+1, 64+16+i*32-scroll+1, 30, 30, "Open");
-                App_Syscall_DrawButton(layerId, width-32*2-16+1, 64+16+i*32-scroll+1, 30, 30, "Del");
-                App_Syscall_DrawButton(layerId, width-32*3-16+1, 64+16+i*32-scroll+1, 30, 30, "Mov");
-                App_Syscall_DrawButton(layerId, width-32*4-16+1, 64+16+i*32-scroll+1, 30, 30, "Cpy");
-                App_Syscall_DrawButton(layerId, width-32*5-16+1, 64+16+i*32-scroll+1, 30, 30, "Run");
-            }
+                if(dirEntData.dirEntList[i].type == File_Directory) {
+                    App_Syscall_DrawButton(layerId, width-32-16+1, 64+16+i*32-scroll.offset+1, 30, 30, ">");
+                    App_Syscall_DrawButton(layerId, width-32*2-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Del");
+                    App_Syscall_DrawButton(layerId, width-32*3-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Mov");
+                    App_Syscall_DrawButton(layerId, width-32*4-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Cpy");
+                }else {
+                    App_Syscall_DrawButton(layerId, width-32-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Open");
+                    App_Syscall_DrawButton(layerId, width-32*2-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Del");
+                    App_Syscall_DrawButton(layerId, width-32*3-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Mov");
+                    App_Syscall_DrawButton(layerId, width-32*4-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Cpy");
+                    App_Syscall_DrawButton(layerId, width-32*5-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Run");
+                }
 
-            if(0 <= 64+16+32+i*32-scroll-1) App_Syscall_DrawSquare(layerId, 0, 64+16+32+i*32-scroll-1, width, 1, gray);
+                if(0 <= 64+16+32+i*32-scroll.offset-1) App_Syscall_DrawSquare(layerId, 0, 64+16+32+i*32-scroll.offset-1, width, 1, gray);
+            }
         }
     }else {
         ascii str[] = "Path Not Found.";
@@ -611,6 +622,7 @@ void flush(void) {
             App_Syscall_DrawFont(layerId, i*8, 64+16, str[i], black);
         }
     }
+    App_Syscall_DrawSquare(layerId, 0, 0, width, 64+16, white);
 
     //パスバー
     App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, white);
@@ -660,7 +672,7 @@ void flush(void) {
     App_Syscall_DrawFont(layerId, width-64-16+8*3, 64, 'e', gray);
 
     //スクロールバー
-    App_Syscall_DrawScrollBar(layerId, width-16, 64+16, height-64-16, 0, dirEntData.entryCount*32);
+    App_Syscall_DrawScrollBar(layerId, &scroll);
 
     return;
 }

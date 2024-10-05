@@ -90,4 +90,6 @@ sintn App_Syscall_DrawScrollBar(uintn layerId, App_Syscall_Scrollbar_Data* data)
 
 sintn App_Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* data, uintn mouseX, uintn mouseY);
 
+sintn App_Syscall_DrawShade(uintn layerId, sintn x, sintn y, uintn width, uintn height, Graphic_Color color);
+
 #endif

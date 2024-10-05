@@ -17,6 +17,16 @@ ascii path[DefaultBuffSize] = "";
 
 App_Syscall_Scrollbar_Data scroll = {width-16, 64+16, height-64-16, 0, height-64-16};
 
+Graphic_Color white = {0xff, 0xff, 0xff};
+Graphic_Color black = {0x00, 0x00, 0x00};
+Graphic_Color gray = {0x88, 0x88, 0x88};
+Graphic_Color blue = {0x55, 0x55, 0xff};
+Graphic_Color shudow = {0x4f, 0x4f, 0x4f};
+Graphic_Color light = {0xd0, 0xd0, 0xd0};
+
+Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
+
+
 struct {
     uintn isExist;
     uintn pages;
@@ -429,6 +439,7 @@ void respondMouse(Task_Message* message) {
         //スクロールバー
         if((sintn)(width-16) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width
             && (sintn)(64+16) <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < (sintn)height) {
+            App_Syscall_DrawShade(layerId, 0, 64+16, width-16, height-16-64, black);
             App_Syscall_DrawScrollBar_Response(layerId, &scroll, message->data.MouseLayerEvent.x, message->data.MouseLayerEvent.y);
             flush();
         }
@@ -570,20 +581,15 @@ void load(void) {
     selectedIndex = -1;
     scroll.offset = 0;
     scroll.page_height = dirEntData.entryCount*32;
+    if(height-64-16 < dirEntData.entryCount*32) {
+        scroll.page_height += 16;
+    }
 
     return;
 }
 
 
 void flush(void) {
-    Graphic_Color white = {0xff, 0xff, 0xff};
-    Graphic_Color black = {0x00, 0x00, 0x00};
-    Graphic_Color gray = {0x88, 0x88, 0x88};
-    Graphic_Color blue = {0x55, 0x55, 0xff};
-    Graphic_Color shudow = {0x4f, 0x4f, 0x4f};
-    Graphic_Color light = {0xd0, 0xd0, 0xd0};
-
-    Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
     App_Syscall_DrawSquare(layerId, 0, 64+16, width, height, white);
 

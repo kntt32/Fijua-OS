@@ -36,6 +36,7 @@
 .global App_Syscall_DrawButton_NotActive
 .global App_Syscall_DrawScrollBar
 .global App_Syscall_DrawScrollBar_Response
+.global App_Syscall_DrawShade
 
 .text
 
@@ -227,5 +228,10 @@ App_Syscall_DrawScrollBar:
 
 App_Syscall_DrawScrollBar_Response:
     mov $37, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_DrawShade:
+    mov $38, %rax
     callq *(0x100000)
     ret

@@ -319,3 +319,46 @@ void Graphic_FrameBuff_DrawFrom(Graphic_FrameBuff framebuff, sintn x, sintn y, u
 
     return;
 }
+
+void Graphic_FrameBuff_DrawShade(Graphic_FrameBuff framebuff, sintn x, sintn y, uintn width, uintn height, Graphic_Color color) {
+    if(x < 0) {
+        if((uintn)(-x) < width) {
+            width -= (uintn)(-x);
+        }else {
+            return;
+        }
+        x = 0;
+    }
+    if(y < 0) {
+        if((uintn)(-x) < width) {
+            height -= (uintn)(-y);
+        }else {
+            return;
+        }
+        y = 0;
+    }
+    if(framebuff.width <= x+width) {
+        if(framebuff.width <= (uintn)x) {
+            return;
+        }else {
+            width = framebuff.width - x;
+        }
+    }
+    if(framebuff.height <= y+height) {
+        if(framebuff.height <= (uintn)y) {
+            return;
+        }else {
+            height = framebuff.height - y;
+        }
+    }
+
+    uint32* targetFrameBuff = (uint32*)((uintn)framebuff.frameBuff + (x + y*framebuff.scanlineWidth)*4);
+    uint32 color_bgr = Graphic_Color2BGR(color);
+    for(uintn i=0; i<height; i++) {
+        for(uintn k=i&1; k<width; k+=2) {
+            targetFrameBuff[k + i*framebuff.scanlineWidth] = color_bgr;
+        }
+    }
+
+    return;
+}

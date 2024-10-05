@@ -1287,9 +1287,9 @@ sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* 
                         return 0;
                     case Task_Message_MouseLayerEvent:;
                         uintn drawHeight = height - 32;
-    if(height < page_height) {
-        drawHeight = (height-32)*height/page_height;
-    }
+                        if(height < page_height) {
+                            drawHeight = (height-32)*height/page_height;
+                        }
                         sintn scroll = ((sintn)message.data.MouseLayerEvent.y - (sintn)mouseY)*(sintn)(page_height - height)/(sintn)(height-32-drawHeight);
                         if(scroll < 0) {
                             if(data->offset < (uintn)(-scroll)) {
@@ -1321,6 +1321,17 @@ sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* 
         return -1;
     }
 
+    return 0;
+}
+
+
+sintn Syscall_DrawShade(uintn layerId, sintn x, sintn y, uintn width, uintn height, Graphic_Color color) {
+    Graphic_FrameBuff framebuff;
+    if(Layer_Window_GetFrameBuff(layerId, &framebuff)) return -1;
+
+    Graphic_FrameBuff_DrawShade(framebuff, x, y, width, height, color);
+    Layer_Window_NotifyUpdate(layerId, x, y, width, height);
+    
     return 0;
 }
 

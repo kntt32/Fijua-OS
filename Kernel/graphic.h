@@ -33,4 +33,6 @@ void Graphic_FrameBuff_DrawSquare(Graphic_FrameBuff framebuff, sintn x, sintn y,
 
 void Graphic_FrameBuff_DrawFrom(Graphic_FrameBuff framebuff, sintn x, sintn y, uintn xfrom, uintn yfrom, uintn width, uintn height, Graphic_FrameBuff from);
 
+void Graphic_FrameBuff_DrawShade(Graphic_FrameBuff framebuff, sintn x, sintn y, uintn width, uintn height, Graphic_Color color);
+
 #endif

@@ -24,4 +24,9 @@ typedef struct {
 
 void Syscall_Init(void);
 
+
+sintn Syscall_DrawButton(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
+
+sintn Syscall_DrawButton_Pushed(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
+
 #endif

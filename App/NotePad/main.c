@@ -118,8 +118,9 @@ uintn NotePad_open(ascii path[DefaultBuffSize]) {
 
 void respondMouse(Task_Message* message) {
     //保存ボタン
-    if(0 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32
+    if(0 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 48
         && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
+        App_Syscall_DrawButton_Pushed(notePad.layerId, 1, 1, 48-2, 32-2, "save");
         //save
         for(uintn i=0; i<notePad.textBoxData.buffSize; i++) {
             if(notePad.textBoxData.buff[i] == '\0') {
@@ -136,12 +137,7 @@ void respondMouse(Task_Message* message) {
 
 void flush(void) {
     App_Syscall_DrawSquare(notePad.layerId, 0, 0, width, 32, gray);
-
-    App_Syscall_DrawSquare(notePad.layerId, 1, 1, 32-2, 32-2, ui_color);//save
-    App_Syscall_DrawFont(notePad.layerId, 0, 10, 'S', black);
-    App_Syscall_DrawFont(notePad.layerId, 8, 10, 'a', black);
-    App_Syscall_DrawFont(notePad.layerId, 8*2, 10, 'v', black);
-    App_Syscall_DrawFont(notePad.layerId, 8*3, 10, 'e', black);
+    App_Syscall_DrawButton(notePad.layerId, 1, 1, 48-2, 32-2, "save");
 
     return;
 }

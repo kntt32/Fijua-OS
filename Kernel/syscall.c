@@ -363,6 +363,10 @@ sintn Syscall_MkDir(const ascii path[], uintn pathLength) {
 
     uintn status;
 
+    if(path[0] == '\0') {
+        return 2;
+    }
+
     ascii path_temp[pathLength+3];
     for(uintn i=0; i<pathLength; i++) {
         path_temp[i] = path[i];
@@ -373,14 +377,14 @@ sintn Syscall_MkDir(const ascii path[], uintn pathLength) {
             break;
         }
         if(i == pathLength-1 && path[i] != '\0') {
-            return 2;
+            return 3;
         }
     }
 
     ascii buff[1];
     buff[0] = '\0';
     status = File_WriteFromMem(path_temp, 1, buff);
-    if(status) return 3;
+    if(status) return 4;
 
     File_Remove(path_temp);
 
@@ -541,18 +545,8 @@ sintn Syscall_Confirm(const ascii* question, uintn strlength) {
     Graphic_Color red = {0xee, 0xaa, 0xaa};
     Graphic_Color black = {0x00, 0x00, 0x00};
 
-    Syscall_DrawSquare(layerId, 300-52*2, 100-35, 50, 32, gray);
-    Syscall_DrawSquare(layerId, 300-52, 100-35, 50, 32, red);
-
-    Syscall_DrawFont(layerId, 300-52*2+17, 100-35+10, 'O', black);
-    Syscall_DrawFont(layerId, 300-52*2+25, 100-35+10, 'k', black);
-
-    Syscall_DrawFont(layerId, 300-52+1, 100-35+10, 'C', black);
-    Syscall_DrawFont(layerId, 300-52+1+8, 100-35+10, 'a', black);//Cancel
-    Syscall_DrawFont(layerId, 300-52+1+8*2, 100-35+10, 'n', black);
-    Syscall_DrawFont(layerId, 300-52+1+8*3, 100-35+10, 'c', black);
-    Syscall_DrawFont(layerId, 300-52+1+8*4, 100-35+10, 'e', black);
-    Syscall_DrawFont(layerId, 300-52+1+8*5, 100-35+10, 'l', black);
+    Syscall_DrawButton(layerId, 300-52*2, 100-35, 50, 32, "Ok");
+    Syscall_DrawButton(layerId, 300-52, 100-35, 50, 32, "Cancel");
 
     for(uintn i=0; i<strlength; i++) {
         if(question[i] == '\0') break;
@@ -581,12 +575,14 @@ sintn Syscall_Confirm(const ascii* question, uintn strlength) {
                 //Ok
                 if(300-52*2 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-52*2+50
                     && 100-35 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 100-35+32) {
+                    Syscall_DrawButton_Pushed(layerId, 300-52*2, 100-35, 50, 32, "Ok");
                     Layer_Window_Delete(layerId);
                     return 0;
                 }
                 //No
                 if(300-52 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-52+50
                     && 100-35 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 100-35+32) {
+                    Syscall_DrawButton_Pushed(layerId, 300-52, 100-35, 50, 32, "Cancel");
                     Layer_Window_Delete(layerId);
                     return 1;
                 }
@@ -627,10 +623,7 @@ sintn Syscall_Alert(const ascii* str, uintn strlength) {
     Graphic_Color gray = {0xb0, 0xb0, 0xb0};
     Graphic_Color black = {0x00, 0x00, 0x00};
 
-    Syscall_DrawSquare(layerId, 300-52, 100-35, 50, 32, gray);
-
-    Syscall_DrawFont(layerId, 300-52+17, 100-35+10, 'O', black);
-    Syscall_DrawFont(layerId, 300-52+25, 100-35+10, 'k', black);
+    Syscall_DrawButton(layerId, 300-52, 100-35, 50, 32, "Ok");
 
     for(uintn i=0; i<strlength; i++) {
         if(str[i] == '\0') break;
@@ -654,6 +647,7 @@ sintn Syscall_Alert(const ascii* str, uintn strlength) {
                 //Ok
                 if(300-52 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-52+50
                     && 100-35 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 100-35+32) {
+                    Syscall_DrawButton_Pushed(layerId, 300-52, 100-35, 50, 32, "Ok");
                     Layer_Window_Delete(layerId);
                     return 0;
                 }
@@ -780,9 +774,8 @@ sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn
     Graphic_Color black = {0x00, 0x00, 0x00};
     Graphic_Color editor_backcolor = {0xff, 0xff, 0xff};
     Graphic_Color uicolor = {0xf0, 0xf0, 0xf0};
-    Syscall_DrawSquare(layerId, 300-51, 150-33, 50, 32, gray);
-    Syscall_DrawFont(layerId, 300-51+25-8, 150-33+10, 'O', black);
-    Syscall_DrawFont(layerId, 300-51+25, 150-33+10, 'k', black);
+
+    Syscall_DrawButton(layerId, 300-51, 150-33, 50, 32, "Ok");
     
     for(uintn i=0; i<strLength; i++) {
         if(str[i] == '\0') break;
@@ -814,6 +807,7 @@ sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn
                 }
                 if(300-51 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-1
                     && 150-33 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 150-1) {
+                    Syscall_DrawButton_Pushed(layerId, 300-51, 150-33, 50, 32, "Ok");
                     Layer_Window_Delete(layerId);
                     return 0;
                 }

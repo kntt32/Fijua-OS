@@ -27,13 +27,7 @@ Graphic_Color light = {0xd0, 0xd0, 0xd0};
 Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
 ascii pathBar_buff[DefaultBuffSize] = "pathbar";
-App_Syscall_EditBox_Data pathBar = {32+1, 32+1, width-32*2-2, 32-2, pathBar_buff, DefaultBuffSize, 0, 1, 0, 0, 0, 1};/*
-    //パスバー
-    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, white);
-    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 1, shudow);
-    App_Syscall_DrawSquare(layerId, 32+1, 32+32-2, width-32*2-2, 1, light);
-    App_Syscall_DrawSquare(layerId, 32+1, 32+1, 1, 32-2, shudow);
-    App_Syscall_DrawSquare(layerId, width-32-2, 32+1, 1, 32-2, light);*/
+App_Syscall_EditBox_Data pathBar = {32+1, 32+1, width-32*2-2, 32-2, pathBar_buff, DefaultBuffSize, 0, 1, 0, 0, 0, 1, 1};
 
 
 struct {
@@ -50,6 +44,8 @@ void load(void);
 void flush(void);
 uintn mv(const ascii fromRelPath[DefaultBuffSize], const ascii toRelPath[DefaultBuffSize], ascii workingPath[DefaultBuffSize]);
 uintn cp(const ascii fromRelPath[DefaultBuffSize], const ascii toRelPath[DefaultBuffSize], ascii workingPath[DefaultBuffSize]);
+static void sprintint(uintn number, uintn buffsize, ascii buff[]);
+
 
 
 sintn main(ascii arg[32]) {

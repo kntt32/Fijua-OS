@@ -716,32 +716,57 @@ static sintn Syscall_EditBox_GetOffset(uintn index, optional out uintn* x, optio
     return 1;
 }
 
+static sintn Syscall_EditBox_MaxXWithY_Index(uintn y, App_Syscall_EditBox_Data* data) {
+    sintn index = Syscall_EditBox_GetIndex(0, y, data);
+    if(index < 0) {
+        return -1;
+    }
+
+    for(uintn i=index; i<data->buffSize; i++) {
+        if(data->buff[i] == '\n' || data->buff[i] == '\0') {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+static void Syscall_EditBox_GetXYByMouse(sintn mouseX, sintn mouseY, out uintn* offsetX, out uintn* offsetY, in App_Syscall_EditBox_Data* data) {
+    sintn x = (mouseX-data->x-4)/8;
+    sintn y = (mouseY-data->y-8)/20;
+
+    if(x < 0) x = 0;
+    if(y < 0) y = 0;
+
+    sintn index = Syscall_EditBox_GetIndex(x, y, data);
+    if(index < 0) {
+        uintn textLength = Syscall_EditBox_TextLength(data);
+        if(textLength == 0) {
+            *offsetX = 0;
+            *offsetY = 0;
+        }else {
+            Syscall_EditBox_GetOffset(textLength-1, offsetX, offsetY, data);
+            (*offsetX) ++;
+            if(data->width < (*offsetX)*8+4+8) {
+                *offsetX = 0;
+                (*offsetY) ++;
+            }
+        }
+    }else {
+        *offsetX = x;
+        *offsetY = y;
+    }
+
+    return;
+}
+
 
 sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out App_Syscall_EditBox_Data* data) {
-    if(!(data->x <= (sintn)mouseX && mouseX < data->x+data->width && data->y <= (sintn)mouseY && mouseY < data->y+data->height)) return 0;
+    if(!(data->x <= mouseX && mouseX < data->x+data->width && data->y <= mouseY && mouseY < data->y+data->height)) return 0;
 
-    {
-        sintn cursor_index = Syscall_EditBox_GetIndex((mouseX-data->x-4)/8, (mouseY-data->y-8)/20, data);
-        if(cursor_index < 0) {
-            Syscall_StdOut("B\n", sizeof("B\n"));
-            uintn cursor_startX = 0;
-            uintn cursor_startY = 0;
-
-            Syscall_EditBox_GetOffset(Syscall_EditBox_TextLength(data)-1, &cursor_startX, &cursor_startY, data);
-            data->cursor_startX = cursor_startX+1;
-            data->cursor_startY = cursor_startY;
-            if(data->width < data->cursor_startX*8+4+8) {
-                data->cursor_startX = 0;
-                data->cursor_startY ++;
-            }
-        }else {
-            Syscall_StdOut("C\n", sizeof("C\n"));
-            data->cursor_startX = (mouseX-data->x-4)/8;
-            data->cursor_startY = (mouseY-data->y-8)/20;
-        }
-        data->cursor_endX = data->cursor_startX+1;
-        data->cursor_endY = data->cursor_startY;
-    }
+    Syscall_EditBox_GetXYByMouse(mouseX, mouseY, &data->cursor_startX, &data->cursor_startY, data);
+    data->cursor_endX = data->cursor_startX;
+    data->cursor_endY = data->cursor_startY;
 
     Task_Message message;
     while(1) {
@@ -757,14 +782,67 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                 Message_EnQueue(Task_GetRunningTaskId(), &message);
                 return -1;
             case Task_Message_MouseLayerEvent:
-                if(!(data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < data->x+data->width && message.data.MouseLayerEvent.y <= (sintn)mouseY && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
-                    Syscall_EditBox_Draw(layerId, data);
-                    return 0;
+                if(message.data.MouseLayerEvent.layerId == layerId) {
+                    if(message.data.MouseLayerEvent.leftButton == 1
+                        && !((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width)
+                            && (sintn)data->y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
+                        Syscall_EditBox_Draw(layerId, data);
+                        Message_EnQueue(Task_GetRunningTaskId(), &message);
+                        return 0;
+                    }
+
+                    if(message.data.MouseLayerEvent.leftButton) {
+                        Syscall_EditBox_GetXYByMouse(message.data.MouseLayerEvent.x, message.data.MouseLayerEvent.y, &data->cursor_startX, &data->cursor_startY, data);
+                        data->cursor_endX = data->cursor_startX;
+                        data->cursor_endY = data->cursor_startY;
+
+                        while(1) {
+                            Syscall_EditBox_Draw_(layerId, data);
+                            uint8 flag = 0;
+                            Task_Message message2;
+                            Syscall_ReadMessage(&message2);
+
+                            switch(message2.type) {
+                                case Task_Message_Quit:
+                                    Message_EnQueue(Task_GetRunningTaskId(), &message);
+                                    return -1;
+                                case Task_Message_CloseWindow:
+                                    Message_EnQueue(Task_GetRunningTaskId(), &message);
+                                    return -1;
+                                case Task_Message_MouseLayerEvent:
+                                    if(!message2.data.MouseLayerEvent.leftButton) {
+                                        flag = 1;
+                                        break;
+                                    }
+
+                                    uintn cursor_newX;
+                                    uintn cursor_newY;
+                                    Syscall_EditBox_GetXYByMouse(message2.data.MouseLayerEvent.x, message2.data.MouseLayerEvent.y, &cursor_newX, &cursor_newY, data);
+                                    if(cursor_newY < data->cursor_startY || (cursor_newY == data->cursor_startY && cursor_newX <= data->cursor_startX)) {
+                                        data->cursor_startX = cursor_newX;
+                                        data->cursor_startY = cursor_newY;
+                                    }else if(data->cursor_endY < cursor_newY || (cursor_newY == data->cursor_endY && data->cursor_endX <= cursor_newX)) {
+                                        data->cursor_endX = cursor_newX;
+                                        data->cursor_endY = cursor_newY;
+                                    }else {
+                                        data->cursor_endX = cursor_newX;
+                                        data->cursor_endY = cursor_newY;
+                                    }
+                                    break;
+                                default:
+                                    flag = 1;
+                                    break;
+                            }
+
+                            if(flag) break;
+                        }
+                    }
                 }
 
                 break;
             case Task_Message_KeyPushed:
-                if(!data->allowInput) break;
+                if(data->allowInput) {
+                }
                 
                 break;
             default:
@@ -800,7 +878,7 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
             if(0 <= y*20+8-data->scroll) {
                 if((data->cursor_startY <= y && y <= data->cursor_endY)
                     && (y != data->cursor_startY || data->cursor_startX <= x)
-                    && (y != data->cursor_endY || x < data->cursor_endX)) {
+                    && (y != data->cursor_endY || x <= data->cursor_endX)) {
                     Graphic_FrameBuff_DrawSquare(editor_buff, x*8+4, y*20+8-data->scroll+16, 8, 2, black);
                 }
 
@@ -816,16 +894,6 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
 sintn Syscall_EditBox_Draw(uintn layerId, in out App_Syscall_EditBox_Data* data) {
     uintn cursor_startX = 0;
     uintn cursor_startY = 0;
-
-    Syscall_EditBox_GetOffset(Syscall_EditBox_TextLength(data)-1, &cursor_startX, &cursor_startY, data);
-    data->cursor_startX = cursor_startX+1;
-    data->cursor_startY = cursor_startY;
-    if(data->width < data->cursor_startX*8+4+8) {
-        data->cursor_startX = 0;
-        data->cursor_startY ++;
-    }
-    data->cursor_endX = data->cursor_startX+1;
-    data->cursor_endY = data->cursor_startY;
 
     data->cursor_startX = 0;
     data->cursor_startY = 0;

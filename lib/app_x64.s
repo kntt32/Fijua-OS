@@ -37,6 +37,8 @@
 .global App_Syscall_DrawScrollBar
 .global App_Syscall_DrawScrollBar_Response
 .global App_Syscall_DrawShade
+.global App_Syscall_EditBox_Draw
+.global App_Syscall_EditBox_Response
 
 .text
 
@@ -233,5 +235,15 @@ App_Syscall_DrawScrollBar_Response:
 
 App_Syscall_DrawShade:
     mov $38, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_EditBox_Draw:
+    mov $39, %rax
+    callq *(0x100000)
+    ret
+
+App_Syscall_EditBox_Response:
+    mov $40, %rax
     callq *(0x100000)
     ret

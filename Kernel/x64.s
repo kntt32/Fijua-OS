@@ -231,9 +231,6 @@ Syscall_AppEnter:#16バイトアライメントの必要なし
     cmp $27, %rax
     je Syscall_AppEnter_Syscall_Alert
 
-    cmp $28, %rax
-    je Syscall_AppEnter_Syscall_EditBox
-
     cmp $29, %rax
     je Syscall_AppEnter_Syscall_Prompt
 
@@ -263,6 +260,12 @@ Syscall_AppEnter:#16バイトアライメントの必要なし
 
     cmp $38, %rax
     je Syscall_AppEnter_Syscall_DrawShade
+
+    cmp $39, %rax
+    je Syscall_AppEnter_Syscall_EditBox_Draw
+
+    cmp $40, %rax
+    je Syscall_AppEnter_Syscall_EditBox_Response
 
     #無効なシステムコール番号
     mov $-1, %rax
@@ -380,10 +383,6 @@ Syscall_AppEnter_Syscall_Alert:
     call Syscall_Alert
     jmp Syscall_AppEnter_Exit
 
-Syscall_AppEnter_Syscall_EditBox:
-    call Syscall_EditBox
-    jmp Syscall_AppEnter_Exit
-
 Syscall_AppEnter_Syscall_Prompt:
     call Syscall_Prompt
     jmp Syscall_AppEnter_Exit
@@ -422,6 +421,14 @@ Syscall_AppEnter_Syscall_DrawScrollBar_Response:
 
 Syscall_AppEnter_Syscall_DrawShade:
     call Syscall_DrawShade
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_EditBox_Draw:
+    call Syscall_EditBox_Draw
+    jmp Syscall_AppEnter_Exit
+
+Syscall_AppEnter_Syscall_EditBox_Response:
+    call Syscall_EditBox_Response
     jmp Syscall_AppEnter_Exit
 
 Syscall_AppEnter_Exit:

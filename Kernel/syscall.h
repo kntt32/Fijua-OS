@@ -2,6 +2,26 @@
 #define INCLUDED_SYSCALL_H
 
 typedef struct {
+    uintn x;
+    uintn y;
+
+    uintn width;
+    uintn height;
+
+    ascii* buff;
+    uintn buffSize;
+
+    uintn cursor_startX;
+    uintn cursor_startY;
+    uintn cursor_endX;
+    uintn cursor_endY;
+
+    uintn scroll;
+
+    uintn allowInput;
+} App_Syscall_EditBox_Data;
+
+typedef struct {
     ascii* buff;
     uintn buffSize;
 

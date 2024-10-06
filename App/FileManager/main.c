@@ -26,6 +26,15 @@ Graphic_Color light = {0xd0, 0xd0, 0xd0};
 
 Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
+ascii pathBar_buff[DefaultBuffSize] = "pathbar";
+App_Syscall_EditBox_Data pathBar = {32+1, 32+1, width-32*2-2, 32-2, pathBar_buff, DefaultBuffSize, 0, 1, 0, 0, 0, 1};/*
+    //パスバー
+    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, white);
+    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 1, shudow);
+    App_Syscall_DrawSquare(layerId, 32+1, 32+32-2, width-32*2-2, 1, light);
+    App_Syscall_DrawSquare(layerId, 32+1, 32+1, 1, 32-2, shudow);
+    App_Syscall_DrawSquare(layerId, width-32-2, 32+1, 1, 32-2, light);*/
+
 
 struct {
     uintn isExist;
@@ -44,7 +53,7 @@ uintn cp(const ascii fromRelPath[DefaultBuffSize], const ascii toRelPath[Default
 
 
 sintn main(ascii arg[32]) {
-    App_Syscall_ExitStdIo();
+    //App_Syscall_ExitStdIo();
 
     if(!(arg == NULL || arg[0] == '\0')) {
         for(uintn i=0; i<32; i++) {
@@ -396,7 +405,7 @@ void respondMouse(Task_Message* message) {
         //パスバーApp_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, ui_color);
         if(32 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)(width-32)
             && 32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 64) {
-            App_Syscall_EditBox(layerId, 32+1, 32+1, 32-2, path, DefaultBuffSize);
+            App_Syscall_EditBox_Response(layerId, message->data.MouseLayerEvent.x, message->data.MouseLayerEvent.y, &pathBar);
             load();
             flush();
         }
@@ -578,6 +587,15 @@ void load(void) {
         dirEntData.isExist = 1;
     }
 
+    if(path[0] == '\0') {
+        pathBar.buff[0] = '/';
+        pathBar.buff[1] = '\0';
+    }else {
+        for(uintn i=0; i<DefaultBuffSize; i++) {
+            pathBar.buff[i] = path[i];
+        }
+    }
+
     selectedIndex = -1;
     scroll.offset = 0;
     scroll.page_height = dirEntData.entryCount*32;
@@ -631,20 +649,7 @@ void flush(void) {
     App_Syscall_DrawSquare(layerId, 0, 0, width, 64+16, white);
 
     //パスバー
-    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 32-2, white);
-    App_Syscall_DrawSquare(layerId, 32+1, 32+1, width-32*2-2, 1, shudow);
-    App_Syscall_DrawSquare(layerId, 32+1, 32+32-2, width-32*2-2, 1, light);
-    App_Syscall_DrawSquare(layerId, 32+1, 32+1, 1, 32-2, shudow);
-    App_Syscall_DrawSquare(layerId, width-32-2, 32+1, 1, 32-2, light);
-
-    if(path[0] == '\0') {
-        App_Syscall_DrawFont(layerId, 32+8, 32+10, '/', black);
-    }else {
-        for(uintn i=0; i<DefaultBuffSize; i++) {
-            if(path[i] == '\0') break;
-            App_Syscall_DrawFont(layerId, 32+8*(i+1), 32+10, path[i], black);
-        }
-    }
+    App_Syscall_EditBox_Draw(layerId, &pathBar);
 
     //戻るボタン
     App_Syscall_DrawButton(layerId, 0+1, 32+1, 32-2, 32-2, "<-");

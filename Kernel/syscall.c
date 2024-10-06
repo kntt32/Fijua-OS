@@ -659,106 +659,180 @@ sintn Syscall_Alert(const ascii* str, uintn strlength) {
 
 
 //エディタ
-sintn Syscall_EditBox(uintn layerId, uintn x, uintn y, uintn height, out ascii buff[], uintn buffSize) {
-    if(buff == NULL) return 1;
+sintn Syscall_EditBox_Draw(uintn layerId, in out App_Syscall_EditBox_Data* data);
 
-    sintn cursorX = 0;
+static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Data* data);
 
-    uintn width = buffSize*8;
-    for(uintn i=0; i<buffSize; i++) {
-        if(buff[i] == '\0') {
-            cursorX = i;
-            break;
+static sintn Syscall_EditBox_GetIndex(uintn x, uintn y, in App_Syscall_EditBox_Data* data) {
+    uintn seek_x = 0;
+    uintn seek_y = 0;
+
+    for(sintn index=0; index<(sintn)data->buffSize; index++) {
+        if(data->buff[index] == '\0') return -1;
+
+        if(x == seek_x && y == seek_y) {
+            return index;
         }
-        if(i == buffSize-1) buff[0] = '\0';
+
+        seek_x ++;
+        if(data->width < seek_x*8+4+8 || data->buff[index] == '\n') {
+            seek_x = 0;
+            seek_y ++;
+            if(y < seek_y) return -1;
+        }
+    }
+    return -1;
+}
+
+static uintn Syscall_EditBox_TextLength(in App_Syscall_EditBox_Data* data) {
+    for(uintn i=0; i<data->buffSize; i++) {
+        if(data->buff[i] == '\0') {
+            return i;
+        }
+    }
+    return data->buffSize;
+}
+
+static sintn Syscall_EditBox_GetOffset(uintn index, optional out uintn* x, optional out uintn* y, in App_Syscall_EditBox_Data* data) {
+    uintn seek_x = 0;
+    uintn seek_y = 0;
+
+    for(uintn index2=0; index2<data->buffSize; index2++) {
+        if(data->buff[index2] == '\0') return 1;
+
+        if(index2 == index) {
+            if(x != NULL) *x = seek_x;
+            if(y != NULL) *y = seek_y;
+            return 0;
+        }
+
+        seek_x ++;
+        if(data->width < seek_x*8+4+8 || data->buff[index2] == '\n') {
+            seek_x = 0;
+            seek_y ++;
+        }
     }
 
-    Graphic_Color black = {0x00, 0x00, 0x00};
-    Graphic_Color backcolor = {0xff, 0xff, 0xff};
+    return 1;
+}
 
-    Graphic_Color shudow = {0x2f, 0x2f, 0x2f};
-    Graphic_Color light = {0xd0, 0xd0, 0xd0};
+
+sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out App_Syscall_EditBox_Data* data) {
+    if(!(data->x <= (sintn)mouseX && mouseX < data->x+data->width && data->y <= (sintn)mouseY && mouseY < data->y+data->height)) return 0;
+
+    {
+        sintn cursor_index = Syscall_EditBox_GetIndex((mouseX-data->x-4)/8, (mouseY-data->y-8)/20, data);
+        if(cursor_index < 0) {
+            Syscall_StdOut("B\n", sizeof("B\n"));
+            uintn cursor_startX = 0;
+            uintn cursor_startY = 0;
+
+            Syscall_EditBox_GetOffset(Syscall_EditBox_TextLength(data)-1, &cursor_startX, &cursor_startY, data);
+            data->cursor_startX = cursor_startX+1;
+            data->cursor_startY = cursor_startY;
+            if(data->width < data->cursor_startX*8+4+8) {
+                data->cursor_startX = 0;
+                data->cursor_startY ++;
+            }
+        }else {
+            Syscall_StdOut("C\n", sizeof("C\n"));
+            data->cursor_startX = (mouseX-data->x-4)/8;
+            data->cursor_startY = (mouseY-data->y-8)/20;
+        }
+        data->cursor_endX = data->cursor_startX+1;
+        data->cursor_endY = data->cursor_startY;
+    }
 
     Task_Message message;
     while(1) {
-        Syscall_DrawSquare(layerId, x, y, width, height, backcolor);
-        Syscall_DrawSquare(layerId, x, y, width, 1, shudow);
-        Syscall_DrawSquare(layerId, x, y+height-1, width, 1, light);
-        Syscall_DrawSquare(layerId, x, y, 1, height, shudow);
-        Syscall_DrawSquare(layerId, x+width-1, y, 1, height, shudow);
-        
-        for(uintn i=0; i<buffSize; i++) {
-            if(buff[i] == '\0') break;
-            Syscall_DrawFont(layerId, x+8*(i+1), y+height/2-6, buff[i], black);
-        }
-        Syscall_DrawSquare(layerId, x+8*(cursorX+1), y+height/2+8, 8, 2, black);
+        Syscall_EditBox_Draw_(layerId, data);
 
         Syscall_ReadMessage(&message);
+
         switch(message.type) {
             case Task_Message_Quit:
                 Message_EnQueue(Task_GetRunningTaskId(), &message);
                 return -1;
             case Task_Message_CloseWindow:
                 Message_EnQueue(Task_GetRunningTaskId(), &message);
-                return -2;
+                return -1;
             case Task_Message_MouseLayerEvent:
-                if(message.data.MouseLayerEvent.leftButton) {
-                    if(message.data.MouseLayerEvent.layerId != layerId) return 0;
-                    if(!((sintn)x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(x+width)
-                        && (sintn)y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(y+height))) {
-                        Message_EnQueue(Task_GetRunningTaskId(), &message);
-                        return 0;
-                    }else {
-                        sintn cursorX_tmp = (message.data.MouseLayerEvent.x-x)/8;
-                        for(sintn i=0; i<cursorX_tmp-1; i++) {
-                            if(buff[i] == '\0') {
-                                cursorX_tmp = i;
-                                break;
-                            }
-                        }
-                        cursorX = cursorX_tmp;
-                    }
+                if(!(data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < data->x+data->width && message.data.MouseLayerEvent.y <= (sintn)mouseY && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
+                    Syscall_EditBox_Draw(layerId, data);
+                    return 0;
                 }
+
                 break;
             case Task_Message_KeyPushed:
-                if(message.data.KeyPushed.asciiCode != 0) {
-                    if(message.data.KeyPushed.asciiCode == '\n') {
-                        Message_EnQueue(Task_GetRunningTaskId(), &message);
-                        return 0;
-                    }
-                    if(message.data.KeyPushed.asciiCode == 0x08) {
-                        if(cursorX == 0) break;
-                        cursorX --;
-                        for(uintn i=cursorX; i<buffSize-1; i++) {
-                            buff[i] = buff[i+1];
-                        }
-                        break;
-                    }
-                    if(cursorX == (sintn)buffSize) break;
-                    for(sintn i=buffSize-2; cursorX<=i; i--) {
-                        buff[i+1] = buff[i];
-                    }
-                    buff[cursorX] = message.data.KeyPushed.asciiCode;
-                    cursorX++;
-                }else {
-                    switch(message.data.KeyPushed.scanCode) {
-                        case EFI_SIMPLE_INPUT_SCANCODE_RIGHTARROW:
-                            if(buff[cursorX] != '\0') cursorX++;
-                            break;
-                        case EFI_SIMPLE_INPUT_SCANCODE_LEFTARROW:
-                            if(cursorX != 0) cursorX--;
-                            break;
-                        default:
-                            break;
-                    }
-                }
+                if(!data->allowInput) break;
+                
+                break;
             default:
                 break;
         }
     }
 
+    Syscall_EditBox_Draw(layerId, data);
 
     return 0;
+}
+
+static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Data* data) {
+    Graphic_FrameBuff framebuff;
+    if(Layer_Window_GetFrameBuff(layerId, &framebuff)) return -1;
+
+    Syscall_DrawSquare(layerId, data->x, data->y, data->width, data->height, white);
+    Syscall_DrawSquare(layerId, data->x, data->y, 1, data->height, shudow);
+    Syscall_DrawSquare(layerId, data->x+data->width-1, data->y, 1, data->height, light);
+    Syscall_DrawSquare(layerId, data->x, data->y, data->width, 1, shudow);
+    Syscall_DrawSquare(layerId, data->x, data->y+data->height-1, data->width, 1, light);
+
+    Graphic_FrameBuff editor_buff;
+    editor_buff.frameBuff = framebuff.frameBuff+data->x+data->y*framebuff.scanlineWidth;
+    editor_buff.width = MIN(data->width, framebuff.width);
+    editor_buff.height = MIN(data->height, framebuff.height);
+    editor_buff.scanlineWidth = framebuff.scanlineWidth;
+
+    for(uintn y=0; y<data->buffSize/((data->width-4)/8); y++) {
+        for(uintn x=0; x<(data->width-4)/8; x++) {
+            sintn index = Syscall_EditBox_GetIndex(x, y, data);
+
+            if(0 <= y*20+8-data->scroll) {
+                if((data->cursor_startY <= y && y <= data->cursor_endY)
+                    && (y != data->cursor_startY || data->cursor_startX <= x)
+                    && (y != data->cursor_endY || x < data->cursor_endX)) {
+                    Graphic_FrameBuff_DrawSquare(editor_buff, x*8+4, y*20+8-data->scroll+16, 8, 2, black);
+                }
+
+                if(0 <= index) Font_Draw(editor_buff, x*8+4, y*20+8-data->scroll, data->buff[index], black);
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+sintn Syscall_EditBox_Draw(uintn layerId, in out App_Syscall_EditBox_Data* data) {
+    uintn cursor_startX = 0;
+    uintn cursor_startY = 0;
+
+    Syscall_EditBox_GetOffset(Syscall_EditBox_TextLength(data)-1, &cursor_startX, &cursor_startY, data);
+    data->cursor_startX = cursor_startX+1;
+    data->cursor_startY = cursor_startY;
+    if(data->width < data->cursor_startX*8+4+8) {
+        data->cursor_startX = 0;
+        data->cursor_startY ++;
+    }
+    data->cursor_endX = data->cursor_startX+1;
+    data->cursor_endY = data->cursor_startY;
+
+    data->cursor_startX = 0;
+    data->cursor_startY = 0;
+    data->cursor_endX = 0;
+    data->cursor_endY = 0;
+
+    return Syscall_EditBox_Draw_(layerId, data);
 }
 
 
@@ -785,7 +859,7 @@ sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn
     Syscall_DrawSquare(layerId, 9, 150-52-32-1, buffLength*8+2, 32+2, uicolor);
     Syscall_DrawSquare(layerId, 10, 150-52-32, buffLength*8, 32, editor_backcolor);
 
-    Syscall_EditBox(layerId, 10, 150-52-32, 32, buff, buffLength);
+    //Syscall_EditBox(layerId, 10, 150-52-32, 32, buff, buffLength);
 
     Task_Message message;
     while(1) {
@@ -801,9 +875,10 @@ sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn
                 return -2;
             case Task_Message_MouseLayerEvent:
                 if(message.data.MouseLayerEvent.layerId != layerId) break;
+                if(!message.data.MouseLayerEvent.leftButton) break;
                 if(10 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(100+buffLength*8)
                     && 150-52-32 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 150-52) {
-                    Syscall_EditBox(layerId, 10, 150-52-32, 32, buff, buffLength);
+                    //Syscall_EditBox(layerId, 10, 150-52-32, 32, buff, buffLength);
                 }
                 if(300-51 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-1
                     && 150-33 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 150-1) {

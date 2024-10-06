@@ -92,4 +92,8 @@ sintn App_Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Da
 
 sintn App_Syscall_DrawShade(uintn layerId, sintn x, sintn y, uintn width, uintn height, Graphic_Color color);
 
+sintn App_Syscall_EditBox_Draw(uintn layerId, in out App_Syscall_EditBox_Data* data);
+
+sintn App_Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out App_Syscall_EditBox_Data* data);
+
 #endif

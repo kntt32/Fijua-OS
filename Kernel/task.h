@@ -35,8 +35,6 @@ typedef struct {
         struct {
             ascii asciiCode;
             uint16 scanCode;
-
-            uint8 ctrlFlag;
         } KeyPushed;
 
         struct {

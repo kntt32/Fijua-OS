@@ -59,7 +59,6 @@ void Keyboard_Init(void) {
 //キーボードの状態を取得
 void Keyboard_CheckState(void) {
     EFI_INPUT_KEY Efi_KeyboardState;
-    static uint8 ctrlFlag = 0;
 
     uintn status;
     status = Efi_Wrapper(Efi_SimpleTextInputProtocol->ReadKeyStroke, Efi_SimpleTextInputProtocol, &Efi_KeyboardState);
@@ -72,12 +71,6 @@ void Keyboard_CheckState(void) {
     status = Functions_UTF16LE2ASCII(Efi_KeyboardState.UnicodeChar, &(message.data.KeyPushed.asciiCode));
     if(status) message.data.KeyPushed.asciiCode = 0;
     message.data.KeyPushed.scanCode = Efi_KeyboardState.ScanCode;
-
-    if(message.data.KeyPushed.asciiCode != 0) {
-        ctrlFlag = 0;
-    }
-    //if(Efi_KeyboardState.Key.ScanCode == )
-    message.data.KeyPushed.ctrlFlag = ctrlFlag;
 
     Message_EnQueue(Layer_Window_GetFocusedTaskId(), &message);
     return;

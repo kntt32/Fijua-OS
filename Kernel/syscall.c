@@ -773,7 +773,7 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
             data->buff[startIndex+i] = buff[i];
         }
         for(uintn i=endIndex+1; i<data->buffSize; i++) {
-            data->buff[i-(endIndex - startIndex + 1)+buffLength] = data->buff[i]
+            data->buff[i-(endIndex - startIndex + 1)+buffLength] = data->buff[i];
             if(data->buff[i] == '\0') break;
         }
     }else {
@@ -782,7 +782,7 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
             data->buff[i+(buffLength-(endIndex-startIndex+1))] = data->buff[i];
         }
         for(uintn i=0; i<buffLength; i++) {
-            data[startIndex+i] = buff[i];
+            data->buff[startIndex+i] = buff[i];
         }
     }
 

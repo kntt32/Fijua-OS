@@ -772,8 +772,8 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
         for(uintn i=0; i<buffLength; i++) {
             data->buff[startIndex+i] = buff[i];
         }
-        for(uintn i=endIndex+1; i<data->buffSize; i++) {
-            data->buff[i-(endIndex - startIndex)+buffLength-1] = data->buff[i];
+        for(uintn i=endIndex; i<data->buffSize; i++) {
+            data->buff[i-(endIndex - startIndex)+buffLength] = data->buff[i];
         }
     }else {
         if(data->buffSize <= endIndex + buffLength + 1) return;

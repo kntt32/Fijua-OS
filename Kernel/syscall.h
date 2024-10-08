@@ -18,8 +18,8 @@ typedef struct {
 
     uintn scroll;
 
-    uintn allowInput;
-    uintn returnByEnter;
+    uint8 allowInput;
+    uint8 returnByEnter;
 } App_Syscall_EditBox_Data;
 
 typedef struct {

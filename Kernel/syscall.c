@@ -661,7 +661,7 @@ sintn Syscall_Alert(const ascii* str, uintn strlength) {
 //エディタ
 sintn Syscall_EditBox_Draw(uintn layerId, in out App_Syscall_EditBox_Data* data);
 
-static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Data* data);
+static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Data* data, uint8 hideCursor);
 
 static sintn Syscall_EditBox_GetIndex(uintn x, uintn y, in App_Syscall_EditBox_Data* data) {
     uintn seek_x = 0;
@@ -768,7 +768,7 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
 
     sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
     sintn endIndex = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
-    if(buffLength <= endIndex - startIndex + 1) {
+    if(buffLength < (uintn)(endIndex - startIndex + 1)) {
         for(uintn i=0; i<buffLength; i++) {
             data->buff[startIndex+i] = buff[i];
         }
@@ -777,16 +777,19 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
             if(data->buff[i] == '\0') break;
         }
     }else {
+        Syscall_StdOut("A ", 3);
         if(data->buffSize <= endIndex + buffLength + 1) return;
-        for(uintn i=data->buffSize-(buffLength-(endIndex-startIndex+1))-1; endIndex<i; i--) {
-            data->buff[i+(buffLength-(endIndex-startIndex+1))] = data->buff[i];
+        for(sintn i=data->buffSize-buffLength-1; startIndex<=i; i--) {
+            data->buff[i+buffLength] = data->buff[i];
         }
         for(uintn i=0; i<buffLength; i++) {
             data->buff[startIndex+i] = buff[i];
         }
     }
 
-    //
+    Syscall_EditBox_GetOffset(startIndex + buffLength, &data->cursor_startX, &data->cursor_startY, data);
+    data->cursor_endX = data->cursor_startX;
+    data->cursor_endY = data->cursor_startY;
 
     return;
 }
@@ -801,7 +804,7 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
 
     Task_Message message;
     while(1) {
-        Syscall_EditBox_Draw_(layerId, data);
+        Syscall_EditBox_Draw_(layerId, data, 0);
 
         Syscall_ReadMessage(&message);
 
@@ -828,7 +831,7 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                         data->cursor_endY = data->cursor_startY;
 
                         while(1) {
-                            Syscall_EditBox_Draw_(layerId, data);
+                            Syscall_EditBox_Draw_(layerId, data, 0);
                             uint8 flag = 0;
                             Task_Message message2;
                             Syscall_ReadMessage(&message2);
@@ -896,7 +899,7 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
     return 0;
 }
 
-static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Data* data) {
+static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Data* data, uint8 hideCursor) {
     Graphic_FrameBuff framebuff;
     if(Layer_Window_GetFrameBuff(layerId, &framebuff)) return -1;
 
@@ -917,11 +920,15 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
             sintn index = Syscall_EditBox_GetIndex(x, y, data);
 
             if(0 <= y*20+8-data->scroll) {
-                if((data->cursor_startY <= y && y <= data->cursor_endY)
-                    && (y != data->cursor_startY || data->cursor_startX <= x)
-                    && (y != data->cursor_endY || x <= data->cursor_endX)) {
-                    Graphic_FrameBuff_DrawSquare(editor_buff, x*8+4, y*20+8-data->scroll+16, 8, 2, black);
+                if(!hideCursor) {
+                    if((data->cursor_startY <= y && y <= data->cursor_endY)
+                        && (y != data->cursor_startY || data->cursor_startX <= x)
+                        && (y != data->cursor_endY || x <= data->cursor_endX)) {
+                        Graphic_FrameBuff_DrawSquare(editor_buff, x*8+4, y*20+8-data->scroll+16, 8, 2, black);
+                    }
                 }
+
+                if(data->buff[index] == '\0') continue;
 
                 if(0 <= index) Font_Draw(editor_buff, x*8+4, y*20+8-data->scroll, data->buff[index], black);
             }
@@ -941,7 +948,7 @@ sintn Syscall_EditBox_Draw(uintn layerId, in out App_Syscall_EditBox_Data* data)
     data->cursor_endX = 0;
     data->cursor_endY = 0;
 
-    return Syscall_EditBox_Draw_(layerId, data);
+    return Syscall_EditBox_Draw_(layerId, data, 1);
 }
 
 
@@ -1031,7 +1038,7 @@ static sintn Syscall_TextBox_GetStrIndexByLine(const ascii* str, uintn index, ui
 
 sintn Syscall_TextBox(uintn layerId, uintn x, uintn y, App_Syscall_TextBox_Data* data) {
     if(data == NULL || data->buff == NULL || data->buffSize == 0) return 1;
-//width/8;
+
     data->buff[data->buffSize-1] = '\0';
 
     Graphic_Color black = {0x00, 0x00, 0x00};

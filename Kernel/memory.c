@@ -60,6 +60,11 @@ void* Memory_AllocPages(uint16 taskId, uintn pages) {
                 Memory_MemMap[k] = taskId;
             }
             Mutex_UnLock(&Memory_Mutex);
+
+            uint8* ptr = (uint8*)((i-pages+1)<<12);
+            for(uintn i=0; i<0x1000*pages; i++) {
+                ptr[i] = 0;
+            }
             return (void*)((i-pages+1)<<12);
         }
     }

@@ -774,7 +774,6 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
         }
         for(uintn i=endIndex+1; i<data->buffSize; i++) {
             data->buff[i-(endIndex - startIndex)+buffLength-1] = data->buff[i];
-            if(data->buff[i] == '\0') break;
         }
     }else {
         if(data->buffSize <= endIndex + buffLength + 1) return;
@@ -1512,7 +1511,7 @@ sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* 
             }
         }
         //バーのドラッグ
-        if(y+16 <= mouseY && mouseY < y+height-16) {
+        if(x <= mouseX && mouseX < x+16 && y+16 <= mouseY && mouseY < y+height-16) {
             Task_Message message;
             while(1) {
                 Syscall_ReadMessage(&message);
@@ -1527,8 +1526,10 @@ sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* 
                     case Task_Message_MouseLayerEvent:;
                         uintn drawHeight = height - 32;
                         if(height < page_height) {
+                            if(page_height == 0) return -1;
                             drawHeight = (height-32)*height/page_height;
                         }
+                        if(height-32-drawHeight == 0) return -1;
                         sintn scroll = ((sintn)message.data.MouseLayerEvent.y - (sintn)mouseY)*(sintn)(page_height - height)/(sintn)(height-32-drawHeight);
                         if(scroll < 0) {
                             if(data->offset < (uintn)(-scroll)) {

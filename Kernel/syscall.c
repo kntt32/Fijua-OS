@@ -768,19 +768,18 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
 
     sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
     sintn endIndex = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
-    if(buffLength < (uintn)(endIndex - startIndex + 1)) {
+    if((sintn)buffLength < (endIndex - startIndex)) {
         for(uintn i=0; i<buffLength; i++) {
             data->buff[startIndex+i] = buff[i];
         }
         for(uintn i=endIndex+1; i<data->buffSize; i++) {
-            data->buff[i-(endIndex - startIndex + 1)+buffLength] = data->buff[i];
+            data->buff[i-(endIndex - startIndex)+buffLength-1] = data->buff[i];
             if(data->buff[i] == '\0') break;
         }
     }else {
-        Syscall_StdOut("A ", 3);
         if(data->buffSize <= endIndex + buffLength + 1) return;
-        for(sintn i=data->buffSize-buffLength-1; startIndex<=i; i--) {
-            data->buff[i+buffLength] = data->buff[i];
+        for(sintn i=data->buffSize-(buffLength-(endIndex-startIndex))-1; endIndex<=i; i--) {
+            data->buff[i+(buffLength-(endIndex-startIndex))] = data->buff[i];
         }
         for(uintn i=0; i<buffLength; i++) {
             data->buff[startIndex+i] = buff[i];
@@ -877,13 +876,66 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
             case Task_Message_KeyPushed:
                 if(data->allowInput) {
                     if(message.data.KeyPushed.scanCode == 0) {
-                        if(0x21 <= message.data.KeyPushed.asciiCode && message.data.KeyPushed.asciiCode <= 0x7e) {
+                        if((0x21 <= message.data.KeyPushed.asciiCode && message.data.KeyPushed.asciiCode <= 0x7e) || message.data.KeyPushed.asciiCode == '\n') {
                             ascii str[2];
                             str[0] = message.data.KeyPushed.asciiCode;
                             str[1] = '\0';
                             Syscall_EditBox_InsertStr(str, data);
                         }
+
+                        if(message.data.KeyPushed.asciiCode == 0x08) {
+                            sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
+                            sintn endIndex = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
+
+                            if(startIndex != endIndex) {
+                                Syscall_EditBox_InsertStr("", data);
+                            }else if(0 < startIndex) {
+                                Syscall_EditBox_GetOffset(startIndex-1, &data->cursor_startX, &data->cursor_startY, data);
+                                Syscall_EditBox_InsertStr("", data);
+                            }
+                        }
+
+                        if(message.data.KeyPushed.asciiCode == 3) {
+                            //copy
+                            sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
+                            sintn endIndex = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
+                            if(startIndex < 0 || endIndex < 0) break;
+                            Clip_Set(data->buff+startIndex, endIndex-startIndex+1);
+                        }else if(message.data.KeyPushed.asciiCode == 22) {
+                            //past
+                            uintn buffSize = 0;
+                            Clip_Get(NULL, &buffSize);
+                            ascii buff[buffSize];
+                            if(Clip_Get(buff, &buffSize)) {
+                                break;
+                            }
+                            Syscall_EditBox_InsertStr(buff, data);
+                        }else if(message.data.KeyPushed.asciiCode == 1) {
+                            //select all
+                            for(uintn i=0; i<data->buffSize; i++) {
+                                if(data->buff[i] == '\0') {
+                                    Syscall_EditBox_GetOffset(i, &data->cursor_endX, &data->cursor_endY, data);
+                                }
+                            }
+                            data->cursor_startX = 0;
+                            data->cursor_startY = 0;
+                        }else if(message.data.KeyPushed.asciiCode == 24) {
+                            //copy and delete
+                            sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
+                            sintn endIndex = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
+                            if(startIndex < 0 || endIndex < 0) break;
+                            Clip_Set(data->buff+startIndex, endIndex-startIndex+1);
+                            Syscall_EditBox_InsertStr("", data);
+                        }
+
                     }else {
+                        //up
+
+                        //down
+
+                        //right
+
+                        //left
 
                     }
                 }
@@ -930,7 +982,9 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
 
                 if(data->buff[index] == '\0') continue;
 
-                if(0 <= index) Font_Draw(editor_buff, x*8+4, y*20+8-data->scroll, data->buff[index], black);
+                if(0 <= index) {
+                    Font_Draw(editor_buff, x*8+4, y*20+8-data->scroll, data->buff[index], black);
+                }
             }
         }
     }

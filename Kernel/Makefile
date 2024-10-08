@@ -72,4 +72,4 @@ endif
 	$(CC) -I $(INCLUDE) -Wall -Wextra --target=$(TARGET) -fshort-wchar -ffreestanding -mno-red-zone -c -O2 $<
 
 %.o: %.s
-	$(CC) -I $(INCLUDE) -Wall -Wextra --target=$(TARGET) -c -O2 $<
+	$(CC) -I $(INCLUDE) -Wall -Wextra --target=$(TARGET) -c -O0 $<

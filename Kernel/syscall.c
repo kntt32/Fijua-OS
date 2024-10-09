@@ -869,12 +869,35 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                             if(flag) break;
                         }
                     }
+
+                    //clip & paste
+                    if(message.data.MouseLayerEvent.rightButton != 0
+                        && ((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width)
+                            && (sintn)data->y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
+
+                        if(data->cursor_startX == data->cursor_endX && data->cursor_startY == data->cursor_endY) {
+                            //paste
+                            uintn buffSize = 0;
+                            Clip_Get(NULL, &buffSize);
+                            ascii buff[buffSize];
+                            if(Clip_Get(buff, &buffSize)) {
+                                break;
+                            }
+                            Syscall_EditBox_InsertStr(buff, data);
+                        }else {
+                            //copy
+                            sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
+                            sintn endIndex = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
+                            if(startIndex < 0 || endIndex < 0) break;
+                            Clip_Set(data->buff+startIndex, endIndex-startIndex+1);
+                        }
+                    }
                 }
 
                 break;
             case Task_Message_KeyPushed:
-                if(data->allowInput) {
-                    if(message.data.KeyPushed.scanCode == 0) {
+                if(message.data.KeyPushed.scanCode == 0) {
+                    if(data->allowInput) {
                         if((0x21 <= message.data.KeyPushed.asciiCode && message.data.KeyPushed.asciiCode <= 0x7e) || message.data.KeyPushed.asciiCode == '\n') {
                             ascii str[2];
                             str[0] = message.data.KeyPushed.asciiCode;
@@ -893,132 +916,97 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                                 Syscall_EditBox_InsertStr("", data);
                             }
                         }
-/*
-                        if(message.data.KeyPushed.asciiCode == 3) {
-                            //copy
-                            sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
-                            sintn endIndex = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
-                            if(startIndex < 0 || endIndex < 0) break;
-                            Clip_Set(data->buff+startIndex, endIndex-startIndex+1);
-                        }else if(message.data.KeyPushed.asciiCode == 22) {
-                            //past
-                            uintn buffSize = 0;
-                            Clip_Get(NULL, &buffSize);
-                            ascii buff[buffSize];
-                            if(Clip_Get(buff, &buffSize)) {
-                                break;
-                            }
-                            Syscall_EditBox_InsertStr(buff, data);
-                        }else if(message.data.KeyPushed.asciiCode == 1) {
-                            //select all
-                            for(uintn i=0; i<data->buffSize; i++) {
-                                if(data->buff[i] == '\0') {
-                                    Syscall_EditBox_GetOffset(i, &data->cursor_endX, &data->cursor_endY, data);
-                                }
-                            }
+                    }
+                }else {
+                    //up
+                    if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_UPARROW) {
+                        if(data->cursor_startY == 0) {
                             data->cursor_startX = 0;
-                            data->cursor_startY = 0;
-                        }else if(message.data.KeyPushed.asciiCode == 24) {
-                            //copy and delete
-                            sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
-                            sintn endIndex = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
-                            if(startIndex < 0 || endIndex < 0) break;
-                            Clip_Set(data->buff+startIndex, endIndex-startIndex+1);
-                            Syscall_EditBox_InsertStr("", data);
-                        }
-*/
-                    }else {
-                        //up
-                        if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_UPARROW) {
-                            if(data->cursor_startY == 0) {
-                                data->cursor_startX = 0;
-                            }else {
-                                data->cursor_startY --;
-                                if(Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data) < 0) {
-                                    sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
-                                    if(0 <= maxXindex) {
-                                        Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
-                                    }else {
-                                        data->cursor_startY ++;
-                                    }
-                                }
-                            }
-                            data->cursor_endX = data->cursor_startX;
-                            data->cursor_endY = data->cursor_startY;
-                        }
-
-                        //down
-                        if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_DOWNARROW) {
-                            data->cursor_startY ++;
+                        }else {
+                            data->cursor_startY --;
                             if(Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data) < 0) {
                                 sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
                                 if(0 <= maxXindex) {
                                     Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
                                 }else {
-                                    data->cursor_startY --;
-                                    sintn maxX2index = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
-                                    if(0 <= maxX2index) {
-                                        Syscall_EditBox_GetOffset(maxX2index, &data->cursor_startX, &data->cursor_startY, data);
-                                    }else {
-                                        //unknown
-                                    }
+                                    data->cursor_startY ++;
                                 }
                             }
-                            data->cursor_endX = data->cursor_startX;
-                            data->cursor_endY = data->cursor_startY;
                         }
+                        data->cursor_endX = data->cursor_startX;
+                        data->cursor_endY = data->cursor_startY;
+                    }
 
-                        //right
-                        if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_RIGHTARROW) {
-                            data->cursor_startX ++;
-                            if(Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data) < 0) {
-                                data->cursor_startY ++;
-                                data->cursor_startX = 0;
-                                sintn minXindex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
-                                if(0 <= minXindex) {
-                                    //do nothing
-                                }else {
-                                    data->cursor_startY --;
-                                    sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
-                                    if(0 <= maxXindex) {
-                                        Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
-                                    }else {
-                                        //unknown
-                                    }
-                                }
-                            }
-                            data->cursor_endX = data->cursor_startX;
-                            data->cursor_endY = data->cursor_startY;
-                        }
-
-                        //left
-                        if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_LEFTARROW) {
-                            if(data->cursor_startX == 0) {
-                                if(data->cursor_startY == 0) {
-                                    //do nothing
-                                }else {
-                                    data->cursor_startY --;
-                                    sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
-                                    if(0 <= maxXindex) {
-                                        Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
-                                    }else {
-                                        //unknown
-                                        data->cursor_startY ++;
-                                    }
-                                }
+                    //down
+                    if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_DOWNARROW) {
+                        data->cursor_startY ++;
+                        if(Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data) < 0) {
+                            sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                            if(0 <= maxXindex) {
+                                Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
                             }else {
-                                data->cursor_startX --;
-                                if(0 <= Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data)) {
-                                    //do nothing
+                                data->cursor_startY --;
+                                sintn maxX2index = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                                if(0 <= maxX2index) {
+                                    Syscall_EditBox_GetOffset(maxX2index, &data->cursor_startX, &data->cursor_startY, data);
                                 }else {
                                     //unknown
-                                    data->cursor_startX ++;
                                 }
                             }
-                            data->cursor_endX = data->cursor_startX;
-                            data->cursor_endY = data->cursor_startY;
                         }
+                        data->cursor_endX = data->cursor_startX;
+                        data->cursor_endY = data->cursor_startY;
+                    }
 
+                    //right
+                    if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_RIGHTARROW) {
+                        data->cursor_startX ++;
+                        if(Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data) < 0) {
+                            data->cursor_startY ++;
+                            data->cursor_startX = 0;
+                            sintn minXindex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
+                            if(0 <= minXindex) {
+                                //do nothing
+                            }else {
+                                data->cursor_startY --;
+                                sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                                if(0 <= maxXindex) {
+                                    Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
+                                }else {
+                                    //unknown
+                                }
+                            }
+                        }
+                        data->cursor_endX = data->cursor_startX;
+                        data->cursor_endY = data->cursor_startY;
+                    }
+
+                    //left
+                    if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_LEFTARROW) {
+                        if(data->cursor_startX == 0) {
+                            if(data->cursor_startY == 0) {
+                                //do nothing
+                            }else {
+                                data->cursor_startY --;
+                                sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                                if(0 <= maxXindex) {
+                                    Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
+                                }else {
+                                    //unknown
+                                    data->cursor_startY ++;
+                                }
+                            }
+                        }else {
+                            data->cursor_startX --;
+                            if(0 <= Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data)) {
+                                //do nothing
+                            }else {
+                                //unknown
+                                data->cursor_startX ++;
+                            }
+                        }
+                        data->cursor_endX = data->cursor_startX;
+                        data->cursor_endY = data->cursor_startY;
                     }
                 }
                 

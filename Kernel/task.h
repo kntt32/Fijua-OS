@@ -42,6 +42,7 @@ typedef struct {
             sintn x;
             sintn y;
             uintn leftButton;
+            uintn rightButton;
         } MouseLayerEvent;
 
         struct {

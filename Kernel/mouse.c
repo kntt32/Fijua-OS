@@ -19,6 +19,7 @@ static EFI_SIMPLE_POINTER_PROTOCOL* Efi_SimplePointerProtocol[Mouse_SupportHardw
 static sintn Mouse_y = 0;
 static sintn Mouse_x = 0;
 static uintn Mouse_leftButton = 0;
+static uintn Mouse_rightButton = 0;
 static uintn displayWidth;
 static uintn displayHeight;
 static const sintn Mouse_speed = 30;
@@ -80,6 +81,7 @@ void Mouse_CheckState(void) {
     sintn divNumY;
 
     Mouse_leftButton = 0;
+    Mouse_rightButton = 0;
 
     for(uintn i=0; i<Efi_SimplePointerProtocol_Count; i++) {
         status = Efi_Wrapper(Efi_SimplePointerProtocol[i]->GetState, Efi_SimplePointerProtocol[i], &Efi_Mouse_State);
@@ -91,6 +93,7 @@ void Mouse_CheckState(void) {
             if(divNumX != 0) Mouse_x += (Mouse_speed*Efi_Mouse_State.RelativeMovementX)/divNumX;
             if(divNumY != 0) Mouse_y += (Mouse_speed*Efi_Mouse_State.RelativeMovementY)/divNumY;
             if(Efi_Mouse_State.LeftButton) Mouse_leftButton = 1;
+            if(Efi_Mouse_State.RightButton) Mouse_rightButton = 1;
         }
     }
     if(updateFlag) {
@@ -98,7 +101,7 @@ void Mouse_CheckState(void) {
         if(Mouse_y < 0) Mouse_y = 0;
         if(displayWidth <= (uintn)Mouse_x) Mouse_x = displayWidth-1;
         if(displayHeight <= (uintn)Mouse_y) Mouse_y = displayHeight-1;
-        Layer_Mouse_NotifyUpdate(Mouse_x, Mouse_y, Mouse_leftButton);
+        Layer_Mouse_NotifyUpdate(Mouse_x, Mouse_y, Mouse_leftButton, Mouse_rightButton);
     }
 
     return;

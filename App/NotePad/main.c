@@ -73,7 +73,7 @@ sintn main(ascii arg[32]) {
         App_Syscall_EditBox_Response(layerId, editboxData.x, editboxData.y, &editboxData);
 
         Task_Message message;
-        App_Syscall_CheckMessage(&message);
+        App_Syscall_ReadMessage(&message);
 
         switch(message.type) {
             case Task_Message_CloseWindow:

@@ -893,7 +893,7 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                                 Syscall_EditBox_InsertStr("", data);
                             }
                         }
-
+/*
                         if(message.data.KeyPushed.asciiCode == 3) {
                             //copy
                             sintn startIndex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
@@ -926,15 +926,98 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                             Clip_Set(data->buff+startIndex, endIndex-startIndex+1);
                             Syscall_EditBox_InsertStr("", data);
                         }
-
+*/
                     }else {
                         //up
+                        if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_UPARROW) {
+                            if(data->cursor_startY == 0) {
+                                data->cursor_startX = 0;
+                            }else {
+                                data->cursor_startY --;
+                                if(Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data) < 0) {
+                                    sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                                    if(0 <= maxXindex) {
+                                        Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
+                                    }else {
+                                        data->cursor_startY ++;
+                                    }
+                                }
+                            }
+                            data->cursor_endX = data->cursor_startX;
+                            data->cursor_endY = data->cursor_startY;
+                        }
 
                         //down
+                        if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_DOWNARROW) {
+                            data->cursor_startY ++;
+                            if(Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data) < 0) {
+                                sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                                if(0 <= maxXindex) {
+                                    Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
+                                }else {
+                                    data->cursor_startY --;
+                                    sintn maxX2index = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                                    if(0 <= maxX2index) {
+                                        Syscall_EditBox_GetOffset(maxX2index, &data->cursor_startX, &data->cursor_startY, data);
+                                    }else {
+                                        //unknown
+                                    }
+                                }
+                            }
+                            data->cursor_endX = data->cursor_startX;
+                            data->cursor_endY = data->cursor_startY;
+                        }
 
                         //right
+                        if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_RIGHTARROW) {
+                            data->cursor_startX ++;
+                            if(Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data) < 0) {
+                                data->cursor_startY ++;
+                                data->cursor_startX = 0;
+                                sintn minXindex = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
+                                if(0 <= minXindex) {
+                                    //do nothing
+                                }else {
+                                    data->cursor_startY --;
+                                    sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                                    if(0 <= maxXindex) {
+                                        Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
+                                    }else {
+                                        //unknown
+                                    }
+                                }
+                            }
+                            data->cursor_endX = data->cursor_startX;
+                            data->cursor_endY = data->cursor_startY;
+                        }
 
                         //left
+                        if(message.data.KeyPushed.scanCode == EFI_SIMPLE_INPUT_SCANCODE_LEFTARROW) {
+                            if(data->cursor_startX == 0) {
+                                if(data->cursor_startY == 0) {
+                                    //do nothing
+                                }else {
+                                    data->cursor_startY --;
+                                    sintn maxXindex = Syscall_EditBox_MaxXWithY_Index(data->cursor_startY, data);
+                                    if(0 <= maxXindex) {
+                                        Syscall_EditBox_GetOffset(maxXindex, &data->cursor_startX, &data->cursor_startY, data);
+                                    }else {
+                                        //unknown
+                                        data->cursor_startY ++;
+                                    }
+                                }
+                            }else {
+                                data->cursor_startX --;
+                                if(0 <= Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data)) {
+                                    //do nothing
+                                }else {
+                                    //unknown
+                                    data->cursor_startX ++;
+                                }
+                            }
+                            data->cursor_endX = data->cursor_startX;
+                            data->cursor_endY = data->cursor_startY;
+                        }
 
                     }
                 }
@@ -1507,53 +1590,6 @@ sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* 
                 data->offset += 16;
                 if(page_height-height <= data->offset) {
                     data->offset = page_height-height;
-                }
-            }
-        }
-        //バーのドラッグ
-        if(x <= mouseX && mouseX < x+16 && y+16 <= mouseY && mouseY < y+height-16) {
-            Task_Message message;
-            while(1) {
-                Syscall_ReadMessage(&message);
-
-                switch(message.type) {
-                    case Task_Message_Quit:
-                        Message_EnQueue(Task_GetRunningTaskId(), &message);
-                        return -1;
-                    case Task_Message_CloseWindow:
-                        Message_EnQueue(Task_GetRunningTaskId(), &message);
-                        return 0;
-                    case Task_Message_MouseLayerEvent:;
-                        uintn drawHeight = height - 32;
-                        if(height < page_height) {
-                            if(page_height == 0) return -1;
-                            drawHeight = (height-32)*height/page_height;
-                        }
-                        if(height-32-drawHeight == 0) return -1;
-                        sintn scroll = ((sintn)message.data.MouseLayerEvent.y - (sintn)mouseY)*(sintn)(page_height - height)/(sintn)(height-32-drawHeight);
-                        if(scroll < 0) {
-                            if(data->offset < (uintn)(-scroll)) {
-                                data->offset = 0;
-                            }else {
-                                data->offset += scroll;
-                            }
-                        }else {
-                            if(height <= page_height) {
-                                data->offset += scroll;
-                                if(page_height-height <= data->offset) {
-                                    data->offset = page_height-height;
-                                }
-                            }
-                        }
-                        mouseX = message.data.MouseLayerEvent.x;
-                        mouseY = message.data.MouseLayerEvent.y;
-                        Syscall_DrawScrollBar(layerId, data);
-                        if(!message.data.MouseLayerEvent.leftButton) {
-                            return 0;
-                        }
-                        break;
-                    default:
-                        break;
                 }
             }
         }

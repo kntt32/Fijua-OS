@@ -50,4 +50,8 @@ sintn Syscall_DrawButton(uintn layerId, uintn x, uintn y, uintn width, uintn hei
 
 sintn Syscall_DrawButton_Pushed(uintn layerId, uintn x, uintn y, uintn width, uintn height, in const ascii* str);
 
+sintn Syscall_DrawScrollBar(uintn layerId, App_Syscall_Scrollbar_Data* data);
+
+sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* data, uintn mouseX, uintn mouseY);
+
 #endif

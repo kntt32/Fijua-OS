@@ -715,6 +715,28 @@ static sintn Syscall_EditBox_GetOffset(uintn index, optional out uintn* x, optio
     return 1;
 }
 
+
+static uintn Syscall_EditBox_CountLine(App_Syscall_EditBox_Data* data) {
+    uintn seek_x = 0;
+    uintn seek_y = 0;
+
+    for(uintn index2=0; index2<data->buffSize; index2++) {
+        if(data->buff[index2] == '\0') {
+            return seek_y;
+        }
+
+        seek_x ++;
+        if(data->width < seek_x*8+4+8 || data->buff[index2] == '\n') {
+            seek_x = 0;
+            seek_y ++;
+        }
+    }
+
+    return 0;
+}
+
+
+
 static sintn Syscall_EditBox_MaxXWithY_Index(uintn y, App_Syscall_EditBox_Data* data) {
     sintn index = Syscall_EditBox_GetIndex(0, y, data);
     if(index < 0) {
@@ -794,7 +816,7 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
 
 
 sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out App_Syscall_EditBox_Data* data) {
-    if(!(data->x <= mouseX && mouseX < data->x+data->width && data->y <= mouseY && mouseY < data->y+data->height)) return 0;
+    if(!(data->x <= mouseX && mouseX < data->x+data->width+(data->returnByEnter)?(16):(0) && data->y <= mouseY && mouseY < data->y+data->height)) return 0;
 
     Syscall_EditBox_GetXYByMouse(mouseX, mouseY, &data->cursor_startX, &data->cursor_startY, data);
     data->cursor_endX = data->cursor_startX;
@@ -816,7 +838,7 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
             case Task_Message_MouseLayerEvent:
                 if(message.data.MouseLayerEvent.layerId == layerId) {
                     if(message.data.MouseLayerEvent.leftButton == 1
-                        && !((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width)
+                        && !((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width+(data->returnByEnter)?(16):(0))
                             && (sintn)data->y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
                         Syscall_EditBox_Draw(layerId, data);
                         Message_EnQueue(Task_GetRunningTaskId(), &message);
@@ -824,49 +846,58 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                     }
 
                     if(message.data.MouseLayerEvent.leftButton) {
-                        Syscall_EditBox_GetXYByMouse(message.data.MouseLayerEvent.x, message.data.MouseLayerEvent.y, &data->cursor_startX, &data->cursor_startY, data);
-                        data->cursor_endX = data->cursor_startX;
-                        data->cursor_endY = data->cursor_startY;
+                        if(((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width)
+                            && (sintn)data->y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
+                            Syscall_EditBox_GetXYByMouse(message.data.MouseLayerEvent.x, message.data.MouseLayerEvent.y, &data->cursor_startX, &data->cursor_startY, data);
+                            data->cursor_endX = data->cursor_startX;
+                            data->cursor_endY = data->cursor_startY;
 
-                        while(1) {
-                            Syscall_EditBox_Draw_(layerId, data, 0);
-                            uint8 flag = 0;
-                            Task_Message message2;
-                            Syscall_ReadMessage(&message2);
+                            while(1) {
+                                Syscall_EditBox_Draw_(layerId, data, 0);
+                                uint8 flag = 0;
+                                Task_Message message2;
+                                Syscall_ReadMessage(&message2);
 
-                            switch(message2.type) {
-                                case Task_Message_Quit:
-                                    Message_EnQueue(Task_GetRunningTaskId(), &message);
-                                    return -1;
-                                case Task_Message_CloseWindow:
-                                    Message_EnQueue(Task_GetRunningTaskId(), &message);
-                                    return -1;
-                                case Task_Message_MouseLayerEvent:
-                                    if(!message2.data.MouseLayerEvent.leftButton) {
+                                switch(message2.type) {
+                                    case Task_Message_Quit:
+                                        Message_EnQueue(Task_GetRunningTaskId(), &message);
+                                        return -1;
+                                    case Task_Message_CloseWindow:
+                                        Message_EnQueue(Task_GetRunningTaskId(), &message);
+                                        return -1;
+                                    case Task_Message_MouseLayerEvent:
+                                        if(!message2.data.MouseLayerEvent.leftButton) {
+                                            flag = 1;
+                                            break;
+                                        }
+
+                                        uintn cursor_newX;
+                                        uintn cursor_newY;
+                                        Syscall_EditBox_GetXYByMouse(message2.data.MouseLayerEvent.x, message2.data.MouseLayerEvent.y, &cursor_newX, &cursor_newY, data);
+                                        if(cursor_newY < data->cursor_startY || (cursor_newY == data->cursor_startY && cursor_newX <= data->cursor_startX)) {
+                                            data->cursor_startX = cursor_newX;
+                                            data->cursor_startY = cursor_newY;
+                                        }else if(data->cursor_endY < cursor_newY || (cursor_newY == data->cursor_endY && data->cursor_endX <= cursor_newX)) {
+                                            data->cursor_endX = cursor_newX;
+                                            data->cursor_endY = cursor_newY;
+                                        }else {
+                                            data->cursor_endX = cursor_newX;
+                                            data->cursor_endY = cursor_newY;
+                                        }
+                                        break;
+                                    default:
                                         flag = 1;
                                         break;
-                                    }
+                                }
 
-                                    uintn cursor_newX;
-                                    uintn cursor_newY;
-                                    Syscall_EditBox_GetXYByMouse(message2.data.MouseLayerEvent.x, message2.data.MouseLayerEvent.y, &cursor_newX, &cursor_newY, data);
-                                    if(cursor_newY < data->cursor_startY || (cursor_newY == data->cursor_startY && cursor_newX <= data->cursor_startX)) {
-                                        data->cursor_startX = cursor_newX;
-                                        data->cursor_startY = cursor_newY;
-                                    }else if(data->cursor_endY < cursor_newY || (cursor_newY == data->cursor_endY && data->cursor_endX <= cursor_newX)) {
-                                        data->cursor_endX = cursor_newX;
-                                        data->cursor_endY = cursor_newY;
-                                    }else {
-                                        data->cursor_endX = cursor_newX;
-                                        data->cursor_endY = cursor_newY;
-                                    }
-                                    break;
-                                default:
-                                    flag = 1;
-                                    break;
+                                if(flag) break;
                             }
-
-                            if(flag) break;
+                        }else {
+                            App_Syscall_Scrollbar_Data scrollBar_data = {data->x+data->width, data->y,
+                                                                         data->height, data->scroll,
+                                                                         Syscall_EditBox_CountLine(data)*20+8};
+                            Syscall_DrawScrollBar_Response(layerId, &scrollBar_data, message.data.MouseLayerEvent.x, message.data.MouseLayerEvent.y);
+                            data->scroll = scrollBar_data.offset;
                         }
                     }
 
@@ -898,11 +929,16 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
             case Task_Message_KeyPushed:
                 if(message.data.KeyPushed.scanCode == 0) {
                     if(data->allowInput) {
-                        if((0x21 <= message.data.KeyPushed.asciiCode && message.data.KeyPushed.asciiCode <= 0x7e) || message.data.KeyPushed.asciiCode == '\n') {
+                        if((0x21 <= message.data.KeyPushed.asciiCode && message.data.KeyPushed.asciiCode <= 0x7e) || (!data->returnByEnter && message.data.KeyPushed.asciiCode == '\n')) {
                             ascii str[2];
                             str[0] = message.data.KeyPushed.asciiCode;
                             str[1] = '\0';
                             Syscall_EditBox_InsertStr(str, data);
+                        }
+
+                        if(data->returnByEnter && message.data.KeyPushed.asciiCode == '\n') {
+                            Syscall_EditBox_Draw(layerId, data);
+                            return 0;
                         }
 
                         if(message.data.KeyPushed.asciiCode == 0x08) {
@@ -1059,6 +1095,14 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
         }
     }
 
+    if(data->returnByEnter) {
+        App_Syscall_Scrollbar_Data scrollBar_data = {data->x+data->width, data->y,
+                                                                         data->height, data->scroll,
+                                                                         Syscall_EditBox_CountLine(data)*20+8};
+        Syscall_DrawScrollBar(layerId, &scrollBar_data);
+        
+    }
+
     return 0;
 }
 
@@ -1096,10 +1140,13 @@ sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn
         Syscall_DrawFont(layerId, 10+i*8, 10, str[i], black);
     }
 
-    Syscall_DrawSquare(layerId, 9, 150-52-32-1, buffLength*8+2, 32+2, uicolor);
-    Syscall_DrawSquare(layerId, 10, 150-52-32, buffLength*8, 32, editor_backcolor);
-
-    //Syscall_EditBox(layerId, 10, 150-52-32, 32, buff, buffLength);
+    App_Syscall_EditBox_Data editBox_data = {10, 150-52-32, 300-20, 32,
+                                     buff, buffLength,
+                                     0, 0, 0, 0,
+                                     0,
+                                     1, 1
+                                 };
+    Syscall_EditBox_Draw(layerId, &editBox_data);
 
     Task_Message message;
     while(1) {
@@ -1118,7 +1165,7 @@ sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn
                 if(!message.data.MouseLayerEvent.leftButton) break;
                 if(10 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(100+buffLength*8)
                     && 150-52-32 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 150-52) {
-                    //Syscall_EditBox(layerId, 10, 150-52-32, 32, buff, buffLength);
+                    Syscall_EditBox_Response(layerId, message.data.MouseLayerEvent.x, message.data.MouseLayerEvent.y, &editBox_data);
                 }
                 if(300-51 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 300-1
                     && 150-33 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 150-1) {
@@ -1530,19 +1577,22 @@ sintn Syscall_DrawScrollBar(uintn layerId, App_Syscall_Scrollbar_Data* data) {
     Syscall_DrawSquare(layerId, x, y, 16, 1, shudow);
     Syscall_DrawSquare(layerId, x, y+height-1, 16, 1, light);
 
+
     uintn drawX = x+1;
     uintn drawY = y+16;
+    if(height <= 32) return 1;
     uintn drawHeight = height - 32;
     if(height < page_height) {
         drawHeight = (height-32)*height/page_height;
         drawY = y+16+offset*(height-32-drawHeight)/(page_height - height);
     }
+
     Syscall_DrawSquare(layerId, drawX, drawY, 14, drawHeight, ui_color);
     Syscall_DrawSquare(layerId, drawX, drawY, 1, drawHeight, light);
     Syscall_DrawSquare(layerId, drawX+14-1, drawY, 1, drawHeight, shudow);
     Syscall_DrawSquare(layerId, drawX, drawY, 14, 1, light);
     Syscall_DrawSquare(layerId, drawX, drawY+drawHeight-1, 14, 1, shudow);
-
+    
     Syscall_DrawButton(layerId, x+1, y+1, 14, 14, "");
     Syscall_DrawScrollBar_UpLogo(layerId, x, y);
 

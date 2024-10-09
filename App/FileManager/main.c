@@ -26,8 +26,11 @@ Graphic_Color light = {0xd0, 0xd0, 0xd0};
 
 Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
-ascii pathBar_buff[DefaultBuffSize] = "pathbar";
-App_Syscall_EditBox_Data pathBar = {32+1, 32+1, width-32*2-2, 32-2, pathBar_buff, DefaultBuffSize, 0, 1, 0, 0, 0, 1, 1};
+ascii pathBar_buff[DefaultBuffSize] = "";
+App_Syscall_EditBox_Data pathBar = {32+1, 32+1, width-32*2-2, 32-2,
+                                    pathBar_buff, DefaultBuffSize,
+                                    0, 1, 0, 0,
+                                    0, 1, 1};
 
 
 struct {
@@ -394,6 +397,7 @@ void respondMouse(Task_Message* message) {
         if((sintn)(width-32) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width
             && 32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 64) {
             App_Syscall_DrawButton_Pushed(layerId, width-32+0+1, 32+1, 32-2, 32-2, "");
+
             load();
             flush();
         }
@@ -402,6 +406,7 @@ void respondMouse(Task_Message* message) {
         if(32 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)(width-32)
             && 32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 64) {
             App_Syscall_EditBox_Response(layerId, message->data.MouseLayerEvent.x, message->data.MouseLayerEvent.y, &pathBar);
+
             load();
             flush();
         }
@@ -522,8 +527,8 @@ void respondMouse(Task_Message* message) {
                                 return;
                             }
                             for(uintn k=0; k<DefaultBuffSize; k++) {
-                                path[k] = absPath[k];
-                                if(path[k] == '\0') break;
+                                pathBar.buff[k] = absPath[k];
+                                if(pathBar.buff[k] == '\0') break;
                             }
                             load();
                         }
@@ -570,6 +575,16 @@ void respondMouse(Task_Message* message) {
 
 
 void load(void) {
+    if((pathBar.buff[0] == '\0') || (pathBar.buff[0] == '/' && pathBar.buff[1] == '\0')) {
+        path[0] = '\0';
+        pathBar.buff[0] = '/';
+        pathBar.buff[1] = '\0';
+    }else {
+        for(uintn i=0; i<DefaultBuffSize; i++) {
+            path[i] = pathBar.buff[i];
+        }
+    }
+
     App_Syscall_FreePages(dirEntData.pages, dirEntData.dirEntList);
     dirEntData.isExist = 0;
     dirEntData.dirEntList = NULL;
@@ -581,15 +596,6 @@ void load(void) {
 
     if(!App_Syscall_GetFileList(path, DefaultBuffSize, &dirEntData.entryCount, dirEntData.dirEntList)) {
         dirEntData.isExist = 1;
-    }
-
-    if(path[0] == '\0') {
-        pathBar.buff[0] = '/';
-        pathBar.buff[1] = '\0';
-    }else {
-        for(uintn i=0; i<DefaultBuffSize; i++) {
-            pathBar.buff[i] = path[i];
-        }
     }
 
     selectedIndex = -1;

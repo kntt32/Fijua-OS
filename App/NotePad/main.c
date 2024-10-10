@@ -100,6 +100,11 @@ sintn main(ascii arg[32]) {
                         //Do Something
                         flush();
                     }
+
+                    //
+                    if(32 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)height) {
+                        App_Syscall_EditBox_Response(layerId, editboxData.x, editboxData.y, &editboxData);
+                    }
                 }
                 break;
             default:

@@ -18,6 +18,10 @@ static uintn width;
 static uintn height;
 static const Layer* layerPtr = NULL;
 
+static Graphic_Color gray = {0xaa, 0xaa, 0xaa};
+static Graphic_Color black = {0x10, 0x10, 0x10};
+static Graphic_Color white = {0xff, 0xff, 0xff};
+
 sintn Taskbar_Main(void) {
     uintn layerId;
 
@@ -76,7 +80,7 @@ void Taskbar_RespondMouse(Task_Message* message, uintn layerId) {
     if(0 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32
         && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
         //シェルを起動
-        App_Syscall_DrawButton_Pushed(layerId, 2, 2, 28, 28, "Sh");
+        App_Syscall_DrawButton_Pushed(layerId, 2, 2, 28, 28, "");
         Functions_StartShell();
         return;
     }
@@ -85,7 +89,7 @@ void Taskbar_RespondMouse(Task_Message* message, uintn layerId) {
     if(32 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 64
         && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
         //ファイルマネージャーを起動
-        App_Syscall_DrawButton_Pushed(layerId, 3+32, 2, 28, 28, "Fl");
+        App_Syscall_DrawButton_Pushed(layerId, 3+32, 2, 28, 28, "");
         App_Syscall_RunApp("app/filemanager.elf", sizeof("app/filemanager.elf"), "");
         return;
     }
@@ -119,17 +123,81 @@ void Taskbar_RespondMouse(Task_Message* message, uintn layerId) {
 }
 
 
+//shellロゴ描画
+static void Taskbar_draw_shellLogo(uintn layerId, uintn x, uintn y) {
+    static uint8 logo[] = {
+#include "shell_logo"
+    };
+
+    for(uintn i=0; i<28; i++) {
+        for(uintn k=0; k<4; k++) {
+            uint8 temp = logo[i*4+k];
+            for(uintn j=0; j<8; j++) {
+                if(temp & 0x80) {
+                    App_Syscall_DrawSquare(layerId, x+k*8+j, y+i, 1, 1, gray);
+                }
+                temp <<= 1;
+            }
+        }
+    }
+
+    return;
+}
+
+
+//fileロゴ描画
+static void Taskbar_draw_FileLogo(uintn layerId, uintn x, uintn y) {
+    static uint8 logo[] = {
+#include "file_logo"
+    };
+
+    for(uintn i=0; i<28; i++) {
+        for(uintn k=0; k<4; k++) {
+            uint8 temp = logo[i*4+k];
+            for(uintn j=0; j<8; j++) {
+                if(temp & 0x80) {
+                    App_Syscall_DrawSquare(layerId, x+k*8+j, y+i, 1, 1, gray);
+                }
+                temp <<= 1;
+            }
+        }
+    }
+
+    return;
+}
+
+
+//pwrロゴ描画
+//fileロゴ描画
+static void Taskbar_draw_PwrLogo(uintn layerId, uintn x, uintn y) {
+    static uint8 logo[] = {
+#include "pwr_logo"
+    };
+
+    for(uintn i=0; i<28; i++) {
+        for(uintn k=0; k<4; k++) {
+            uint8 temp = logo[i*4+k];
+            for(uintn j=0; j<8; j++) {
+                if(temp & 0x80) {
+                    App_Syscall_DrawSquare(layerId, x+k*8+j, y+i, 1, 1, gray);
+                }
+                temp <<= 1;
+            }
+        }
+    }
+
+    return;
+}
+
+
+
 //タスクバーを再描画
 void Taskbar_Flush(uintn layerId, const Layer* layer) {
     layerPtr = layer;
 
-    Graphic_Color black = {0x10, 0x10, 0x10};
-    Graphic_Color white = {0xff, 0xff, 0xff};
-    App_Syscall_DrawSquare(layerId, 0, 0, width, 32, white);
+    App_Syscall_DrawSquare(layerId, 0, 0, width, 32, black);
 
     if(layer == NULL) return;
-
-    Graphic_Color gray = {0xaa, 0xaa, 0xaa};
 
     uintn ix = 0;
     for(uintn i=0; i<layerPtr->Window.count; i++) {
@@ -147,10 +215,13 @@ void Taskbar_Flush(uintn layerId, const Layer* layer) {
     App_Syscall_DrawSquare(layerId, 66, 16-5, 2, 10, gray);
     App_Syscall_DrawSquare(layerId, width-38, 16-5, 2, 10, gray);
 
-    App_Syscall_DrawButton(layerId, 2, 2, 28, 28, "Sh");
-    App_Syscall_DrawButton(layerId, 3+32, 2, 28, 28, "Fl");
+    App_Syscall_DrawButton(layerId, 2, 2, 28, 28, "");
+    Taskbar_draw_shellLogo(layerId, 2, 2);
+    App_Syscall_DrawButton(layerId, 3+32, 2, 28, 28, "");
+    Taskbar_draw_FileLogo(layerId, 3+32, 2);
 
-    App_Syscall_DrawButton(layerId, width-32-1, 2, 28, 28, "pwr");
+    App_Syscall_DrawButton(layerId, width-32-1, 2, 28, 28, "");
+    Taskbar_draw_PwrLogo(layerId, width-32+1, 2);
 
     return;
 }

@@ -13,7 +13,6 @@
 const uintn width = 400;
 const uintn height = 300;
 uintn layerId;
-ascii path[DefaultBuffSize] = "";
 
 App_Syscall_Scrollbar_Data scroll = {width-16, 64+16, height-64-16, 0, height-64-16};
 
@@ -28,7 +27,7 @@ Graphic_Color ui_color = {0xf0, 0xf0, 0xf0};
 
 ascii pathBar_buff[DefaultBuffSize] = "";
 App_Syscall_EditBox_Data pathBar = {32+1, 32+1, width-32*2-2, 32-2,
-                                    pathBar_buff, DefaultBuffSize,
+                                    NULL, DefaultBuffSize,
                                     0, 1, 0, 0,
                                     0, 1, 1};
 
@@ -53,15 +52,17 @@ static void sprintint(uintn number, uintn buffsize, ascii buff[]);
 
 sintn main(ascii arg[32]) {
     //App_Syscall_ExitStdIo();
-    pathBar.buff[0] = '\0';
-    path[0] = '\0';
+    pathBar.buff = pathBar_buff;
+
+    pathBar.buff[0] = '/';
+    pathBar.buff[1] = '\0';
 
     if(!(arg == NULL || arg[0] == '\0')) {
         for(uintn i=0; i<32; i++) {
-            path[i] = arg[i];
+            pathBar.buff[i] = arg[i];
             if(arg[i] == '\0') break;
             if(i == 31) {
-                path[0] = '\0';
+                pathBar.buff[0] = '\0';
                 break;
             }
         }
@@ -210,39 +211,53 @@ static uintn getAbsPath(const ascii relPath[DefaultBuffSize], const ascii workin
 }
 
 
+static void movePrecDir(void) {
+    ascii absPath[DefaultBuffSize];
+    if(getAbsPath(
+        "..",
+        pathBar.buff,
+        absPath)) {
+        return;
+    }
+    pathBar.buff[0] = '/';
+    for(uintn k=0; k<DefaultBuffSize; k++) {
+        pathBar.buff[k+1] = absPath[k];
+        if(pathBar.buff[k+1] == '\0') break;
+    }
+    load();
+    return;
+}
+
+
+static void moveToDir(ascii name[DefaultBuffSize]) {
+    ascii absPath[DefaultBuffSize];
+    if(getAbsPath(
+        name,
+        pathBar.buff,
+        absPath)) {
+        return;
+    }
+    pathBar.buff[0] = '/';
+    for(uintn k=0; k<DefaultBuffSize; k++) {
+        pathBar.buff[k+1] = absPath[k];
+        if(pathBar.buff[k+1] == '\0') break;
+    }
+    load();
+    return;
+}
+
+
 void respondKeyboard(Task_Message* message) {
     if(message->type != Task_Message_KeyPushed) return;
 
     if(message->data.KeyPushed.asciiCode != 0) {
         if(message->data.KeyPushed.asciiCode == 0x08) {
-            ascii absPath[DefaultBuffSize];
-            if(getAbsPath(
-                "..",
-                path,
-                absPath)) {
-                return;
-            }
-            for(uintn k=0; k<DefaultBuffSize; k++) {
-                path[k] = absPath[k];
-                if(path[k] == '\0') break;
-            }
-            load();
+            movePrecDir();
         }
         if(message->data.KeyPushed.asciiCode == '\n') {
             if(selectedIndex != -1) {
                 if(dirEntData.dirEntList[selectedIndex].type == File_Directory) {
-                    ascii absPath[DefaultBuffSize];
-                    if(getAbsPath(
-                        dirEntData.dirEntList[selectedIndex].name,
-                        path,
-                        absPath)) {
-                        return;
-                    }
-                    for(uintn k=0; k<DefaultBuffSize; k++) {
-                        path[k] = absPath[k];
-                        if(path[k] == '\0') break;
-                    }
-                    load();
+                    moveToDir(dirEntData.dirEntList[selectedIndex].name);
                 }
             }
         }
@@ -379,19 +394,7 @@ void respondMouse(Task_Message* message) {
             && 32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 64) {
             App_Syscall_DrawButton_Pushed(layerId, 0+1, 32+1, 32-2, 32-2, "<-");
 
-            ascii absPath[DefaultBuffSize];
-            if(getAbsPath(
-                "..",
-                path,
-                absPath)) {
-                return;
-            }
-            for(uintn k=0; k<DefaultBuffSize; k++) {
-                path[k] = absPath[k];
-                if(path[k] == '\0') break;
-            }
-
-            load();
+            movePrecDir();
             flush();
         }
 
@@ -420,7 +423,7 @@ void respondMouse(Task_Message* message) {
             ascii buff[DefaultBuffSize] = "";
             if(!App_Syscall_Prompt("Input Directory Name", sizeof("Input Directory Name"), buff, DefaultBuffSize)) {
                 ascii dirAbsPath[DefaultBuffSize];
-                getAbsPath(buff, path, dirAbsPath);
+                getAbsPath(buff, pathBar.buff, dirAbsPath);
                 if(App_Syscall_MkDir(dirAbsPath, DefaultBuffSize)) {
                     App_Syscall_Alert("MkDir Failed", sizeof("MkDir Failed"));
                 }
@@ -437,7 +440,7 @@ void respondMouse(Task_Message* message) {
             ascii buff[DefaultBuffSize] = "";
             if(!App_Syscall_Prompt("Input File Name", sizeof("Input File Name"), buff, DefaultBuffSize)) {
                 ascii txtAbsPath[DefaultBuffSize];
-                getAbsPath(buff, path, txtAbsPath);
+                getAbsPath(buff, pathBar.buff, txtAbsPath);
                 ascii txtFile[] = "Hello, World!";
                 if(App_Syscall_WriteFileFromMem(txtAbsPath, DefaultBuffSize, sizeof(txtFile), txtFile)) {
                     App_Syscall_Alert("MkTxt Failed", sizeof("MkTxt Failed"));
@@ -470,7 +473,7 @@ void respondMouse(Task_Message* message) {
 
                         if(!App_Syscall_Confirm("Will you delete file?", sizeof("Will you delete file?"))) {
                             ascii buff[DefaultBuffSize];
-                            getAbsPath(dirEntData.dirEntList[i].name, path, buff);
+                            getAbsPath(dirEntData.dirEntList[i].name, pathBar.buff, buff);
                             if(deleteFile_R(buff, 3)) {
                                 App_Syscall_Alert("Delete Failed", sizeof("Delete Failed"));
                             }
@@ -485,11 +488,11 @@ void respondMouse(Task_Message* message) {
                         ascii dest_rel[DefaultBuffSize] = "";
                         ascii dest[DefaultBuffSize] = "";
 
-                        if(getAbsPath(dirEntData.dirEntList[i].name, path, absPath)) {
+                        if(getAbsPath(dirEntData.dirEntList[i].name, pathBar.buff, absPath)) {
                             App_Syscall_Alert("Error", sizeof("Error"));
                         }else if(App_Syscall_Prompt("Destination Path", sizeof("Destination Path"), dest_rel, DefaultBuffSize)) {
                             App_Syscall_Alert("Invalid Path", sizeof("Invalid Path"));
-                        }else if(getAbsPath(dest_rel, path, dest)) {
+                        }else if(getAbsPath(dest_rel, pathBar.buff, dest)) {
                             App_Syscall_Alert("Invalid Path", sizeof("Invalid Path"));
                         }else if(movAndCopyFile_R(absPath, dest, 3, 1)) {
                             App_Syscall_Alert("Error", sizeof("Error"));
@@ -504,11 +507,11 @@ void respondMouse(Task_Message* message) {
                         ascii dest_rel[DefaultBuffSize] = "";
                         ascii dest[DefaultBuffSize] = "";
 
-                        if(getAbsPath(dirEntData.dirEntList[i].name, path, absPath)) {
+                        if(getAbsPath(dirEntData.dirEntList[i].name, pathBar.buff, absPath)) {
                             App_Syscall_Alert("Error", sizeof("Error"));
                         }else if(App_Syscall_Prompt("Destination Path", sizeof("Destination Path"), dest_rel, DefaultBuffSize)) {
                             App_Syscall_Alert("Invalid Path", sizeof("Invalid Path"));
-                        }else if(getAbsPath(dest_rel, path, dest)) {
+                        }else if(getAbsPath(dest_rel, pathBar.buff, dest)) {
                             App_Syscall_Alert("Invalid Path", sizeof("Invalid Path"));
                         }else if(movAndCopyFile_R(absPath, dest, 3, 0)) {
                             App_Syscall_Alert("Error", sizeof("Error"));
@@ -521,18 +524,7 @@ void respondMouse(Task_Message* message) {
                         if((sintn)width - 32-16 <= message->data.MouseLayerEvent.x) {
                             App_Syscall_DrawButton_Pushed(layerId, width-32-16+1, 64+16+i*32-scroll.offset+1, 30, 30, ">");
 
-                            ascii absPath[DefaultBuffSize];
-                            if(getAbsPath(
-                                dirEntData.dirEntList[i].name,
-                                path,
-                                absPath)) {
-                                return;
-                            }
-                            for(uintn k=0; k<DefaultBuffSize; k++) {
-                                pathBar.buff[k] = absPath[k];
-                                if(pathBar.buff[k] == '\0') break;
-                            }
-                            load();
+                            moveToDir(dirEntData.dirEntList[i].name);
                         }
                     }else {
                         //ファイル操作
@@ -541,7 +533,7 @@ void respondMouse(Task_Message* message) {
                         if(width-32-16+1 <= mouseX && mouseX < width-32-16+1+30) {
                             App_Syscall_DrawButton_Pushed(layerId, width-32-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Open");
                             ascii absPath[DefaultBuffSize];
-                            if(getAbsPath(dirEntData.dirEntList[i].name, path, absPath)) {
+                            if(getAbsPath(dirEntData.dirEntList[i].name, pathBar.buff, absPath)) {
                                 App_Syscall_Alert("Error", sizeof("Error"));
                             }
                             if(App_Syscall_RunApp("app/notepad.elf", DefaultBuffSize, absPath)) {
@@ -553,7 +545,7 @@ void respondMouse(Task_Message* message) {
                         if(width-32*5-16+1 <= mouseX && mouseX < width-32*5-16+1+30) {
                             App_Syscall_DrawButton_Pushed(layerId, width-32*5-16+1, 64+16+i*32-scroll.offset+1, 30, 30, "Run");
                             ascii absPath[DefaultBuffSize];
-                            if(getAbsPath(dirEntData.dirEntList[i].name, path, absPath)) {
+                            if(getAbsPath(dirEntData.dirEntList[i].name, pathBar.buff, absPath)) {
                                 App_Syscall_Alert("Error", sizeof("Error"));
                             }
                             if(App_Syscall_RunApp(absPath, DefaultBuffSize, "")) {
@@ -577,14 +569,9 @@ void respondMouse(Task_Message* message) {
 
 
 void load(void) {
-    if((pathBar.buff[0] == '\0') || (pathBar.buff[0] == '/' && pathBar.buff[1] == '\0')) {
-        path[0] = '\0';
+    if(pathBar.buff[0] == '\0') {
         pathBar.buff[0] = '/';
         pathBar.buff[1] = '\0';
-    }else {
-        for(uintn i=0; i<DefaultBuffSize; i++) {
-            path[i] = pathBar.buff[i];
-        }
     }
 
     App_Syscall_FreePages(dirEntData.pages, dirEntData.dirEntList);
@@ -592,11 +579,12 @@ void load(void) {
     dirEntData.dirEntList = NULL;
     dirEntData.entryCount = 0;
     dirEntData.pages = 0;
-    App_Syscall_GetFileList(path, DefaultBuffSize, &dirEntData.entryCount, NULL);
-    dirEntData.pages = (dirEntData.entryCount + 0xfff) >> 12;
+
+    App_Syscall_GetFileList(pathBar.buff, DefaultBuffSize, &dirEntData.entryCount, NULL);
+    dirEntData.pages = (dirEntData.entryCount*sizeof(File_DirectoryEntry) + 0xfff) >> 12;
     if(App_Syscall_AllocPage(dirEntData.pages, (void**)&dirEntData.dirEntList)) return;
 
-    if(!App_Syscall_GetFileList(path, DefaultBuffSize, &dirEntData.entryCount, dirEntData.dirEntList)) {
+    if(!App_Syscall_GetFileList(pathBar.buff, DefaultBuffSize, &dirEntData.entryCount, dirEntData.dirEntList)) {
         dirEntData.isExist = 1;
     }
 

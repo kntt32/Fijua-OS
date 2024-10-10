@@ -297,7 +297,6 @@ uintn File_GetDirectory(const ascii path[], uintn* buffCount, File_DirectoryEntr
     }//無効な入力
 
     uintn status = 0;
-
     //ハンドル取得
     EFI_FILE_PROTOCOL* Efi_fileProtocol = File_GetHandleByPath(path, EFI_FILE_MODE_READ);
     if(Efi_fileProtocol == NULL) {
@@ -313,7 +312,6 @@ uintn File_GetDirectory(const ascii path[], uintn* buffCount, File_DirectoryEntr
         *buffCount = 0;
         return 5;//ディレクトリでない
     }
-
     //ディレクトリエントリを作成
     status = File_DirectoryEntry_SetByDirHandle(Efi_fileProtocol, buffCount, buff);
     if(status) {

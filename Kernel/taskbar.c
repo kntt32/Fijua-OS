@@ -23,7 +23,7 @@ sintn Taskbar_Main(void) {
 
     App_Syscall_GetDisplaySize(&width, &height);
 
-    if(App_Syscall_NewWindow(&(layerId), 0, -100, width, 132-33, "TaskBar")) {
+    if(App_Syscall_NewWindow(&(layerId), 0, -33, width, 32, "TaskBar")) {
         Console_Print("Taskbar_Main: Err");
         return 0;
     }
@@ -55,6 +55,18 @@ sintn Taskbar_Shutdown(void) {
 }
 
 
+sintn Taskbar_GetLayerIndex(uintn layerId) {
+    for(uintn i=0; i<layerPtr->Window.count; i++) {
+        if(layerPtr->Window.Data[i].layerId == layerId) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+
+
 //タスクバーへのマウス操作への応答
 void Taskbar_RespondMouse(Task_Message* message, uintn layerId) {
     if(message->type != Task_Message_MouseLayerEvent) return;
@@ -62,51 +74,44 @@ void Taskbar_RespondMouse(Task_Message* message, uintn layerId) {
 
     //shボタン
     if(0 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 32
-        && 132-33-32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 132-33) {
+        && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
         //シェルを起動
+        App_Syscall_DrawButton_Pushed(layerId, 2, 2, 28, 28, "Sh");
         Functions_StartShell();
         return;
     }
 
     //flボタン
     if(32 <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < 64
-        && 132-33-32 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 132-33) {
+        && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
         //ファイルマネージャーを起動
+        App_Syscall_DrawButton_Pushed(layerId, 3+32, 2, 28, 28, "Fl");
         App_Syscall_RunApp("app/filemanager.elf", sizeof("app/filemanager.elf"), "");
         return;
     }
 
     //pwrボタン
     if((sintn)(width-32) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width
-        && (sintn)(132-33-32) <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < (sintn)(132-33)) {
+        && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
         //シャットダウン
+        App_Syscall_DrawButton_Pushed(layerId, width-32-1, 2, 28, 28, "pwr");
         Task_New(Taskbar_Shutdown, 0, "");
         return;
     }
 
     //他のウインドウへの操作
     if(layerPtr != NULL) {
-        uintn xi = 0;
-        uintn nameLenght = 0;
-        for(sintn i=layerPtr->Window.count-1; 0<=i; i--) {
-            if(layerPtr->Window.Data[i].layerId == layerId) continue;
-
-            for(uintn k=0; k<16; k++) {
-                if(layerPtr->Window.Data[i].name[k] == '\0') {
-                    nameLenght = k;
-                    break;
-                }
-            }
-
-            if((sintn)(64+xi+2*8) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)(64+xi+2*8+nameLenght*8)) {
-                if(xi == 0 && layerPtr->Window.Data[i].hiddenFlag == 0) {
-                    Layer_Window_Hidden(layerPtr->Window.Data[i].layerId);
-                }else {
-                    Layer_Window_Focus(layerPtr->Window.Data[i].layerId);
-                }
+        uintn ix = 0;
+        for(uintn i=0; i<layerPtr->Window.count; i++) {
+            if(layerPtr->Window.idList[i] == layerId) continue;
+            sintn index = Taskbar_GetLayerIndex(layerPtr->Window.idList[i]);
+            if(index < 0) continue;
+            if((sintn)((8*16+2)*ix+72) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)((8*16+2)*(ix+1)+72)) {
+                App_Syscall_DrawButton_Pushed(layerId, (8*16+2)*ix+72, 2, 8*16, 28, layerPtr->Window.Data[index].name);
+                Layer_Window_Focus(layerPtr->Window.idList[i]);
             }
             
-            xi += (nameLenght+4)*8;
+            ix++;
         }
     }
 
@@ -119,53 +124,33 @@ void Taskbar_Flush(uintn layerId, const Layer* layer) {
     layerPtr = layer;
 
     Graphic_Color black = {0x10, 0x10, 0x10};
-    App_Syscall_DrawSquare(layerId, 0, 0, width, 132-33, black);
+    Graphic_Color white = {0xff, 0xff, 0xff};
+    App_Syscall_DrawSquare(layerId, 0, 0, width, 32, white);
 
     if(layer == NULL) return;
 
-    Graphic_Color white = {0xff, 0xff, 0xff};
     Graphic_Color gray = {0xaa, 0xaa, 0xaa};
 
-    uintn xi = 0;
-    for(sintn i=layer->Window.count-1; 0<=i; i--) {
-        if(layer->Window.Data[i].layerId == layerId) continue;
-        
-        uintn nameLenght = 0;
-        if(layer->Window.Data[i].hiddenFlag) {
-            for(uintn k=0; k<16; k++) {
-                if(layer->Window.Data[i].name[k] == '\0') {
-                    nameLenght = k;
-                    break;
-                }
-                App_Syscall_DrawFont(layerId, 64+xi+(2+k)*8, 132-33-32+10, layer->Window.Data[i].name[k], gray);
-            }
-            App_Syscall_DrawSquare(layerId, 64+xi+2*8, 132-33-32, nameLenght*8, 3, gray);
+    uintn ix = 0;
+    for(uintn i=0; i<layerPtr->Window.count; i++) {
+        if(layerPtr->Window.idList[i] == layerId) continue;
+        sintn index = Taskbar_GetLayerIndex(layerPtr->Window.idList[i]);
+        if(index < 0) continue;
+        if(layerPtr->Window.Data[index].hiddenFlag) {
+            App_Syscall_DrawButton_NotActive(layerId, (8*16+2)*ix+72, 2, 8*16, 28, layerPtr->Window.Data[index].name);
         }else {
-            for(uintn k=0; k<16; k++) {
-                if(layer->Window.Data[i].name[k] == '\0') {
-                    nameLenght = k;
-                    break;
-                }
-                App_Syscall_DrawFont(layerId, 64+xi+(2+k)*8, 132-33-32+10, layer->Window.Data[i].name[k], white);
-            }
-            App_Syscall_DrawSquare(layerId, 64+xi+2*8, 132-33-32, nameLenght*8, 3, white);
+            App_Syscall_DrawButton(layerId, (8*16+2)*ix+72, 2, 8*16, 28, layerPtr->Window.Data[index].name);
         }
-        xi += (nameLenght+4)*8;
+        ix++;
     }
 
-    App_Syscall_DrawSquare(layerId, 64, 132-33-32+16-5, 2, 10, gray);
+    App_Syscall_DrawSquare(layerId, 66, 16-5, 2, 10, gray);
+    App_Syscall_DrawSquare(layerId, width-38, 16-5, 2, 10, gray);
 
-    App_Syscall_DrawSquare(layerId, 32, 132-33-32+16-5, 2, 10, gray);
+    App_Syscall_DrawButton(layerId, 2, 2, 28, 28, "Sh");
+    App_Syscall_DrawButton(layerId, 3+32, 2, 28, 28, "Fl");
 
-    App_Syscall_DrawFont(layerId, 10, 132-33-32+10, 'S', white);
-    App_Syscall_DrawFont(layerId, 10+8, 132-33-32+10, 'h', white);
-    App_Syscall_DrawFont(layerId, 42, 132-33-32+10, 'F', white);
-    App_Syscall_DrawFont(layerId, 42+8, 132-33-32+10, 'l', white);
-
-    App_Syscall_DrawSquare(layerId, width-34, 132-33-32+16-5, 2, 10, gray);
-    App_Syscall_DrawFont(layerId, width-30, 132-33-32+10, 'P', white);
-    App_Syscall_DrawFont(layerId, width-30+8, 132-33-32+10, 'w', white);
-    App_Syscall_DrawFont(layerId, width-30+8*2, 132-33-32+10, 'r', white);
+    App_Syscall_DrawButton(layerId, width-32-1, 2, 28, 28, "pwr");
 
     return;
 }

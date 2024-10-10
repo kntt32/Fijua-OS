@@ -67,6 +67,8 @@ typedef struct {
         uintn count;
         uintn pages;
         Layer_Window* Data;
+
+        uintn idList[512];
     } Window;
 
     Layer_Mouse Mouse;

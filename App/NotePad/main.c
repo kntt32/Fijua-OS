@@ -69,9 +69,9 @@ sintn main(ascii arg[32]) {
 
     flush();
 
-    while(1) {
-        App_Syscall_EditBox_Response(layerId, editboxData.x, editboxData.y, &editboxData);
+    App_Syscall_EditBox_Response(layerId, editboxData.x, editboxData.y, &editboxData);
 
+    while(1) {
         Task_Message message;
         App_Syscall_ReadMessage(&message);
 

@@ -83,7 +83,7 @@ void Layer_Init(void) {
 static void Layer_Update_WindowState(void) {
     Layer_Window* targetWindow;
 
-    if(layer.Mouse.oldLeftButton == 0 && layer.Mouse.leftButton != 0 || layer.Mouse.rightButton) {
+    if((layer.Mouse.oldLeftButton == 0 && layer.Mouse.leftButton) != 0 || layer.Mouse.rightButton) {
         targetWindow = layer.Window.Data + layer.Window.count - 1;
 
         for(sintn i=layer.Window.count-1; 0<=i; i--) {
@@ -456,7 +456,10 @@ void Layer_Update(void) {
 static uintn Layer_Window_Expand(void) {
     uintn newPages = layer.Window.pages*2 + 1;
     Layer_Window* newData = Memory_AllocPages(Layer_TaskId, newPages);
-    if(newData == NULL) return 1;
+    if(newData == NULL) {
+        Memory_FreePages(Layer_TaskId, newPages, newData);
+        return 1;
+    }
 
     Functions_MemCpy(newData, layer.Window.Data, sizeof(Layer_Window)*layer.Window.count);
 
@@ -470,9 +473,10 @@ static uintn Layer_Window_Expand(void) {
 
 //Layer.Windowを作成してlayerIdを返す
 uintn Layer_Window_New(uint16 taskId, ascii name[], sintn x, sintn y, uintn width, uintn height) {
+    if(512 <= layer.Window.count) return 1;
     if(taskId == 0 || taskId == 1) return 0;
     if(width == 0 || height == 0) return 0;
-    if(width <= window_titleBar_height*3 || height <= window_titleBar_height) return 0;
+    if(width < window_titleBar_height*3 || height < window_titleBar_height) return 0;
     width += window_shadow_overThick + window_shadow_underThick;
     height += window_shadow_overThick + window_shadow_underThick + window_titleBar_height;
 
@@ -519,6 +523,8 @@ uintn Layer_Window_New(uint16 taskId, ascii name[], sintn x, sintn y, uintn widt
     newWindow->FrameBuff.Data.scanlineWidth = newWindow->FrameBuff.Data.width;
     newWindow->FrameBuff.Data.frameBuff = Memory_AllocPages(Layer_TaskId, newWindow->FrameBuff.pages);
     if(newWindow->FrameBuff.Data.frameBuff == NULL) return 0;
+
+    layer.Window.idList[layer.Window.count] = layerId;
 
     layer.Window.count++;
 
@@ -605,6 +611,13 @@ uintn Layer_Window_Delete(uintn layerId) {
         targetWindow->FrameBuff.Data.frameBuff);
 
     Functions_MemCpy(layer.Window.Data+layerIndex, layer.Window.Data+layerIndex+1, sizeof(Layer_Window)*(layer.Window.count-layerIndex-1));
+
+    for(uintn i=0; i<layer.Window.count; i++) {
+        if(layer.Window.idList[i] == layerId) {
+            Functions_MemCpy(layer.Window.idList+i, layer.Window.idList+i+1, layer.Window.count-i-1);
+            break;
+        }
+    }
 
     layer.Window.count--;
 

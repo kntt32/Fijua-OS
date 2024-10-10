@@ -909,7 +909,6 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                     if(message.data.MouseLayerEvent.rightButton != 0
                         && ((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width)
                             && (sintn)data->y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
-
                         if(data->cursor_startX == data->cursor_endX && data->cursor_startY == data->cursor_endY) {
                             //paste
                             uintn buffSize = 0;
@@ -1151,6 +1150,8 @@ sintn Syscall_Prompt(const ascii str[], uintn strLength, out ascii buff[], uintn
                                      1, 1
                                  };
     Syscall_EditBox_Draw(layerId, &editBox_data);
+
+    Syscall_EditBox_Response(layerId, editBox_data.x, editBox_data.y, &editBox_data);
 
     Task_Message message;
     while(1) {

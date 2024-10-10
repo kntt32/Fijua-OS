@@ -98,7 +98,7 @@ void Taskbar_RespondMouse(Task_Message* message, uintn layerId) {
     if((sintn)(width-32) <= message->data.MouseLayerEvent.x && message->data.MouseLayerEvent.x < (sintn)width
         && 0 <= message->data.MouseLayerEvent.y && message->data.MouseLayerEvent.y < 32) {
         //シャットダウン
-        App_Syscall_DrawButton_Pushed(layerId, width-32-1, 2, 28, 28, "pwr");
+        App_Syscall_DrawButton_Pushed(layerId, width-32-1, 2, 28, 28, "");
         Task_New(Taskbar_Shutdown, 0, "");
         return;
     }

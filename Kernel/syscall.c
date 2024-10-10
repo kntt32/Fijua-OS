@@ -1637,6 +1637,51 @@ sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* 
                 }
             }
         }
+        //バーのドラッグ
+        if(y+16 <= mouseY && mouseY < y+height-16) {
+            Task_Message message;
+            while(1) {
+                Syscall_ReadMessage(&message);
+
+                switch(message.type) {
+                    case Task_Message_Quit:
+                        Message_EnQueue(Task_GetRunningTaskId(), &message);
+                        return -1;
+                    case Task_Message_CloseWindow:
+                        Message_EnQueue(Task_GetRunningTaskId(), &message);
+                        return 0;
+                    case Task_Message_MouseLayerEvent:;
+                        uintn drawHeight = height - 32;
+                        if(height < page_height) {
+                            drawHeight = (height-32)*height/page_height;
+                        }
+                        sintn scroll = ((sintn)message.data.MouseLayerEvent.y - (sintn)mouseY)*(sintn)(page_height - height)/(sintn)(height-32-drawHeight);
+                        if(scroll < 0) {
+                            if(data->offset < (uintn)(-scroll)) {
+                                data->offset = 0;
+                            }else {
+                                data->offset += scroll;
+                            }
+                        }else {
+                            if(height <= page_height) {
+                                data->offset += scroll;
+                                if(page_height-height <= data->offset) {
+                                    data->offset = page_height-height;
+                                }
+                            }
+                        }
+                        mouseX = message.data.MouseLayerEvent.x;
+                        mouseY = message.data.MouseLayerEvent.y;
+                        Syscall_DrawScrollBar(layerId, data);
+                        if(!message.data.MouseLayerEvent.leftButton) {
+                            return 0;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
     }else {
         return -1;
     }

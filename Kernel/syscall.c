@@ -823,9 +823,19 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
     data->cursor_endX = data->cursor_startX;
     data->cursor_endY = data->cursor_startY;
 
+
+    Syscall_EditBox_Draw_(layerId, data, 0);
+
     Task_Message message;
     while(1) {
-        Syscall_EditBox_Draw_(layerId, data, 0);
+        if(data->cursor_startY*20+8 < data->scroll) {
+            if(20 <= data->scroll) {
+                data->scroll -= 20;
+            }else {
+                data->scroll = 0;
+            }
+            Syscall_EditBox_Draw_(layerId, data, 0);;
+        }
 
         Syscall_ReadMessage(&message);
 
@@ -904,6 +914,8 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                             Syscall_DrawScrollBar_Response(layerId, &scrollBar_data, message.data.MouseLayerEvent.x, message.data.MouseLayerEvent.y);
                             data->scroll = scrollBar_data.offset;
                         }
+
+                        Syscall_EditBox_Draw_(layerId, data, 0);
                     }
 
                     //copy & paste
@@ -926,6 +938,8 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                             if(startIndex < 0 || endIndex < 0) break;
                             Clip_Set(data->buff+startIndex, endIndex-startIndex+1);
                         }
+
+                        Syscall_EditBox_Draw_(layerId, data, 0);
                     }
                 }
 
@@ -1050,6 +1064,7 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                     }
                 }
                 
+                Syscall_EditBox_Draw_(layerId, data, 0);
                 break;
             default:
                 break;

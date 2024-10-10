@@ -25,7 +25,6 @@ App_Syscall_EditBox_Data editboxData = {0, 32, width-16, height-32, NULL, 0, 0, 
 
 void flush() {
     App_Syscall_DrawButton(layerId, 1, 1, 48-2, 32-2, "Save");
-    App_Syscall_DrawButton(layerId, 49, 1, 48-2, 32-2, "Help");
 
     App_Syscall_EditBox_Draw(layerId, &editboxData);
 
@@ -89,15 +88,9 @@ sintn main(ascii arg[32]) {
                         for(uintn i=0; i<editboxData.buffSize; i++) {
                             if(editboxData.buff[i] == '\0') {
                                 App_Syscall_WriteFileFromMem(path, DefaultBuffSize, i+1, editboxData.buff);
+                                break;
                             }
                         }
-                        flush();
-                    }
-                    //Help
-                    if(48 <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < 48+48
-                        && 0 <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < 32) {
-                        App_Syscall_DrawButton_Pushed(layerId, 49, 1, 48-2, 32-2, "Help");
-                        //Do Something
                         flush();
                     }
 

@@ -53,6 +53,8 @@ static void sprintint(uintn number, uintn buffsize, ascii buff[]);
 
 sintn main(ascii arg[32]) {
     //App_Syscall_ExitStdIo();
+    pathBar.buff[0] = '\0';
+    path[0] = '\0';
 
     if(!(arg == NULL || arg[0] == '\0')) {
         for(uintn i=0; i<32; i++) {

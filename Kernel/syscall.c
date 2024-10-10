@@ -722,7 +722,7 @@ static uintn Syscall_EditBox_CountLine(App_Syscall_EditBox_Data* data) {
 
     for(uintn index2=0; index2<data->buffSize; index2++) {
         if(data->buff[index2] == '\0') {
-            return seek_y;
+            return seek_y+1;
         }
 
         seek_x ++;
@@ -837,8 +837,12 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                 return -1;
             case Task_Message_MouseLayerEvent:
                 if(message.data.MouseLayerEvent.layerId == layerId) {
+                    uintn scrollBarWidth = 16;
+                    if(data->returnByEnter) {
+                        scrollBarWidth = 0;
+                    }
                     if(message.data.MouseLayerEvent.leftButton == 1
-                        && !((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width+(data->returnByEnter)?(16):(0))
+                        && !((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width+scrollBarWidth)
                             && (sintn)data->y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
                         Syscall_EditBox_Draw(layerId, data);
                         Message_EnQueue(Task_GetRunningTaskId(), &message);
@@ -901,7 +905,7 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
                         }
                     }
 
-                    //clip & paste
+                    //copy & paste
                     if(message.data.MouseLayerEvent.rightButton != 0
                         && ((sintn)data->x <= message.data.MouseLayerEvent.x && message.data.MouseLayerEvent.x < (sintn)(data->x+data->width)
                             && (sintn)data->y <= message.data.MouseLayerEvent.y && message.data.MouseLayerEvent.y < (sintn)(data->y+data->height))) {
@@ -929,7 +933,7 @@ sintn Syscall_EditBox_Response(uintn layerId, uintn mouseX, uintn mouseY, in out
             case Task_Message_KeyPushed:
                 if(message.data.KeyPushed.scanCode == 0) {
                     if(data->allowInput) {
-                        if((0x21 <= message.data.KeyPushed.asciiCode && message.data.KeyPushed.asciiCode <= 0x7e) || (!data->returnByEnter && message.data.KeyPushed.asciiCode == '\n')) {
+                        if((0x20 <= message.data.KeyPushed.asciiCode && message.data.KeyPushed.asciiCode <= 0x7e) || (!data->returnByEnter && message.data.KeyPushed.asciiCode == '\n')) {
                             ascii str[2];
                             str[0] = message.data.KeyPushed.asciiCode;
                             str[1] = '\0';
@@ -1082,7 +1086,7 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
                     if((data->cursor_startY <= y && y <= data->cursor_endY)
                         && (y != data->cursor_startY || data->cursor_startX <= x)
                         && (y != data->cursor_endY || x <= data->cursor_endX)) {
-                        Graphic_FrameBuff_DrawSquare(editor_buff, x*8+4, y*20+8-data->scroll+16, 8, 2, black);
+                        if(0 <= (sintn)y*20+8-(sintn)data->scroll+16) Graphic_FrameBuff_DrawSquare(editor_buff, x*8+4, y*20+8-data->scroll+16, 8, 2, black);
                     }
                 }
 
@@ -1095,7 +1099,7 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
         }
     }
 
-    if(data->returnByEnter) {
+    if(!data->returnByEnter) {
         App_Syscall_Scrollbar_Data scrollBar_data = {data->x+data->width, data->y,
                                                                          data->height, data->scroll,
                                                                          Syscall_EditBox_CountLine(data)*20+8};

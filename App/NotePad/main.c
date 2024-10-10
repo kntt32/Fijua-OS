@@ -20,7 +20,7 @@ const uintn height = 450;
 uintn layerId;
 ascii path[DefaultBuffSize] = "";
 
-App_Syscall_EditBox_Data editboxData = {0, 32, width-16, height-32, NULL, 0, 0, 0, 0, 0, 0, 1, 1};
+App_Syscall_EditBox_Data editboxData = {0, 32, width-16, height-32, NULL, 0, 0, 0, 0, 0, 0, 1, 0};
 
 
 void flush() {

@@ -44,7 +44,7 @@ CSMモードは無効にしておく
 
 ### QEMU
 EDK2のOVMFをファームウェアとして使用する。
-デフォルトではEFI_SIMPLE_POINTER_PROTOCOL（マウス入力を取得する機能）が使用できないため、マウスが使用できない。そのため、[Githubリポジトリ](https://github.com/kntt32/Fijua-OS)にあるOVMFを使うか、この機能を有効にした上でビルドすなおす必要がある。ビルドする場合は、次のような手順を踏む。  
+デフォルトではEFI_SIMPLE_POINTER_PROTOCOL（マウス入力を取得する機能）が使用できないため、マウスが使用できない。そのため、この機能を有効にした上でOVMFをビルドすなおす必要がある。次のような手順を踏む。  
 1. EDK2を入手し、[EDK2のWiki](https://github.com/tianocore/tianocore.github.io/wiki/Getting-Started-with-EDK-II)などを参考にEDK2本体をビルドする
 2. `OvmfPkg/OvmfPkgX64.fdf`に"" ~ ""の部分を書き加える
 ```

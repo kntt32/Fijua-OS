@@ -1080,6 +1080,17 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
     Graphic_FrameBuff framebuff;
     if(Layer_Window_GetFrameBuff(layerId, &framebuff)) return -1;
 
+    {
+        sintn index_start = Syscall_EditBox_GetIndex(data->cursor_startX, data->cursor_startY, data);
+        sintn index_end = Syscall_EditBox_GetIndex(data->cursor_endX, data->cursor_endY, data);
+        if(index_start < 0 || index_end < 0) {
+            data->cursor_startX = 0;
+            data->cursor_startY = 0;
+            data->cursor_endX = 0;
+            data->cursor_endY = 0;
+        }
+    }
+
     Syscall_DrawSquare(layerId, data->x, data->y, data->width, data->height, white);
     Syscall_DrawSquare(layerId, data->x, data->y, 1, data->height, shudow);
     Syscall_DrawSquare(layerId, data->x+data->width-1, data->y, 1, data->height, light);
@@ -1097,17 +1108,15 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
             sintn index = Syscall_EditBox_GetIndex(x, y, data);
 
             if(0 <= y*20+8-data->scroll) {
-                if(!hideCursor) {
-                    if((data->cursor_startY <= y && y <= data->cursor_endY)
-                        && (y != data->cursor_startY || data->cursor_startX <= x)
-                        && (y != data->cursor_endY || x <= data->cursor_endX)) {
-                        if(0 <= (sintn)y*20+8-(sintn)data->scroll+16) Graphic_FrameBuff_DrawSquare(editor_buff, x*8+4, y*20+8-data->scroll+16, 8, 2, black);
-                    }
-                }
-
-                if(data->buff[index] == '\0') continue;
-
                 if(0 <= index) {
+                    if(!hideCursor) {
+                        if((data->cursor_startY <= y && y <= data->cursor_endY)
+                            && (y != data->cursor_startY || data->cursor_startX <= x)
+                            && (y != data->cursor_endY || x <= data->cursor_endX)) {
+                            if(0 <= (sintn)y*20+8-(sintn)data->scroll+16) Graphic_FrameBuff_DrawSquare(editor_buff, x*8+4, y*20+8-data->scroll+16, 8, 2, black);
+                        }
+                    }
+                    if(data->buff[index] == '\0') continue;
                     Font_Draw(editor_buff, x*8+4, y*20+8-data->scroll, data->buff[index], black);
                 }
             }

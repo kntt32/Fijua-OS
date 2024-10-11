@@ -1108,6 +1108,8 @@ static sintn Syscall_EditBox_Draw_(uintn layerId, in out App_Syscall_EditBox_Dat
     editor_buff.scanlineWidth = framebuff.scanlineWidth;
 
     for(uintn y=0; y<data->buffSize/((data->width-4)/8); y++) {
+        if((sintn)data->height <= (sintn)y*20+8-(sintn)data->scroll+16) break;
+
         for(uintn x=0; x<(data->width-4)/8; x++) {
             sintn index = Syscall_EditBox_GetIndex(x, y, data);
 
@@ -1682,6 +1684,9 @@ sintn Syscall_DrawScrollBar_Response(uintn layerId, App_Syscall_Scrollbar_Data* 
                         uintn drawHeight = height - 32;
                         if(height < page_height) {
                             drawHeight = (height-32)*height/page_height;
+                        }
+                        if((sintn)height-32-(sintn)drawHeight <= 0) {
+                            return 0;
                         }
                         sintn scroll = ((sintn)message.data.MouseLayerEvent.y - (sintn)mouseY)*(sintn)(page_height - height)/(sintn)(height-32-drawHeight);
                         if(scroll < 0) {

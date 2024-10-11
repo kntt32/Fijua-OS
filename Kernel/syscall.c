@@ -755,9 +755,11 @@ static sintn Syscall_EditBox_MaxXWithY_Index(uintn y, App_Syscall_EditBox_Data* 
 }
 
 static void Syscall_EditBox_GetXYByMouse(sintn mouseX, sintn mouseY, out uintn* offsetX, out uintn* offsetY, in App_Syscall_EditBox_Data* data) {
-    sintn x = (mouseX-data->x-4)/8;
-    sintn y = (mouseY-data->y-8)/20;
-
+    sintn x = (mouseX-(sintn)data->x-4)/8;
+    sintn y = (mouseY - 8 - (sintn)data->y + (sintn)data->scroll)/20;/*
+y*20+8-data->scroll+16 = mouseY;
+y*20 = mouseY - 8 + data->data->scroll - 16;
+y*//*y*20+8-data->scroll*/
     if(x < 0) x = 0;
     if(y < 0) y = 0;
 
@@ -790,6 +792,9 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
     if((sintn)buffLength < (endIndex - startIndex)) {
         for(uintn i=0; i<buffLength; i++) {
             data->buff[startIndex+i] = buff[i];
+            if(data->buff[startIndex+i] == '\n' && data->returnByEnter) {
+                data->buff[startIndex+i] = ' ';
+            }
         }
         for(uintn i=endIndex; i<data->buffSize; i++) {
             data->buff[i-(endIndex - startIndex)+buffLength] = data->buff[i];
@@ -801,6 +806,9 @@ static void Syscall_EditBox_InsertStr(ascii buff[], in out App_Syscall_EditBox_D
         }
         for(uintn i=0; i<buffLength; i++) {
             data->buff[startIndex+i] = buff[i];
+            if(data->buff[startIndex+i] == '\n' && data->returnByEnter) {
+                data->buff[startIndex+i] = ' ';
+            }
         }
     }
 

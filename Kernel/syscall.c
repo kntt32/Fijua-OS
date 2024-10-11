@@ -686,9 +686,10 @@ static sintn Syscall_EditBox_GetIndex(uintn x, uintn y, in App_Syscall_EditBox_D
 }
 
 static uintn Syscall_EditBox_TextLength(in App_Syscall_EditBox_Data* data) {
+    //null文字含む長さを返す
     for(uintn i=0; i<data->buffSize; i++) {
         if(data->buff[i] == '\0') {
-            return i;
+            return i+1;
         }
     }
     return data->buffSize;
@@ -763,16 +764,11 @@ static void Syscall_EditBox_GetXYByMouse(sintn mouseX, sintn mouseY, out uintn* 
     sintn index = Syscall_EditBox_GetIndex(x, y, data);
     if(index < 0) {
         uintn textLength = Syscall_EditBox_TextLength(data);
-        if(textLength == 0) {
+        if(textLength <= 1) {
             *offsetX = 0;
             *offsetY = 0;
         }else {
             Syscall_EditBox_GetOffset(textLength-1, offsetX, offsetY, data);
-            (*offsetX) ++;
-            if(data->width < (*offsetX)*8+4+8) {
-                *offsetX = 0;
-                (*offsetY) ++;
-            }
         }
     }else {
         *offsetX = x;

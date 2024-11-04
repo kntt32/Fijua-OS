@@ -76,5 +76,5 @@ MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
 
 QEMUはパスを通し、起動ディスクを指定した上で、以下のようなオプションを追加して起動する。$(OVMFFDPATH)にはOVMF.fdのパスを入れる。  
 ```
---monitor stdio -usb -device usb-mouse -device usb-kbd -bios $(OVMFFDPATH)
+--monitor stdio -usb -device usb-mouse -device usb-kbd -m 512M -bios $(OVMFFDPATH)
 ```

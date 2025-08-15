@@ -26,3 +26,7 @@ Fijua-Kernelは自身の持つモジュールの初期化を行い、ウイン�
 - Linuxアプリケーションへの対応
 - x64以外のプラットフォームへの対応（Arm, Riscvなど）
 - セルフホスト
+
+## 関連リポジトリ
+- [as-macro](https://www.github.com/kntt32/as-macro) : AsMacroの完成版
+- [as-os](https://www.github.com/kntt32/as-os) : 後継OS
